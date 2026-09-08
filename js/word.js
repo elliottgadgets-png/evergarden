@@ -107,6 +107,8 @@ export function createWordSystem(canvas) {
   window.addEventListener('pointerleave', () => { pointer.x = -9999; pointer.y = -9999; });
 
   let seeded = false;
+  let energy = 0;   // scroll-velocity energy: fast scrolls shake the letters
+  let lastProg = 0, lastT = 0;
   const smooth = t => t * t * (3 - 2 * t);
 
   function frame(t, progress01) {
@@ -120,7 +122,15 @@ export function createWordSystem(canvas) {
     }
 
     const N = chapters.length;
-    const cf = Math.min(N - 1, Math.max(0, progress01)) * (N - 1);
+    const pr = Math.min(1, Math.max(0, progress01));
+    if (lastT) {
+      const dt = Math.max(1, t - lastT);
+      energy = Math.min(1, energy + Math.abs(pr - lastProg) / dt * 900);
+    }
+    energy *= 0.94;
+    lastProg = pr; lastT = t;
+
+    const cf = pr * (N - 1);
     const ci = Math.min(N - 2, Math.floor(cf));
     const f = cf - ci;
     const A = chapters[ci], B = chapters[ci + 1];
@@ -193,6 +203,12 @@ export function createWordSystem(canvas) {
       }
 
       vy[i] += lift * 0.03 * (0.5 + stag[i]);
+
+      // scroll energy: turbulence while the page flies
+      if (energy > 0.02) {
+        vx[i] += Math.sin(wob[i] * 12.9 + tt * 31) * energy * 0.9;
+        vy[i] += Math.cos(wob[i] * 7.7 + tt * 27) * energy * 0.9;
+      }
 
       vx[i] *= damp; vy[i] *= damp;
       px[i] += vx[i]; py[i] += vy[i];
