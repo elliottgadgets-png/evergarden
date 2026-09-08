@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { makeCrucible, makeNiche, makeBookSealStand } from './props.js';
-import { makeRelief, SOSHIMI_DEPTH } from './relief.js';
+import { makeRelief, SOSHIMI_DEPTH, VERDANT_DEPTH } from './relief.js';
 
 const NOISE = /* glsl */`
 vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}
@@ -327,17 +327,22 @@ export function createWorld(canvas) {
   }
 
   // S4: three lit niches set into the canyon wall, each holding a finished piece
-  const reliefStation = { pos: new THREE.Vector3() };
-  const nicheShots = ['assets/work-videoeditor.jpg', 'assets/work-verdant.jpg', 'assets/work-soshimi.jpg'];
+  const reliefStations = []; // fired-relief stations: {pos, side, gc} gc = gaze center in pq
+  const RELIEF_CONF = {
+    0: { map: 'assets/work-soshimi.jpg', spec: SOSHIMI_DEPTH, seed: 977,  impact: [0.38, 0.58], nt: 0.615, gc: 0.58  }, // relief #1: soshimi
+    1: { map: 'assets/work-verdant.jpg', spec: VERDANT_DEPTH, seed: 1409, impact: [0.50, 0.70], nt: 0.720, gc: 0.685 }, // relief #2: The Sound Room
+  };
+  const nicheShots = ['assets/work-soshimi.jpg', 'assets/work-verdant.jpg', 'assets/work-videoeditor.jpg'];
   nicheShots.forEach((src, i) => {
-    const isRelief = i === 0; // S4 lead work: fired basalt relief (v3.1) - soshimi, facing the road
-    const niche = isRelief ? makeRelief({ map: texLoader.load('assets/work-soshimi.jpg'), depthSpec: SOSHIMI_DEPTH }) : makeNiche(1.6, 1.05);
-    const nt = (isRelief ? 0.615 : 0.58 + i * 0.09);
+    const rc = RELIEF_CONF[i];
+    const isRelief = !!rc; // S4 works as fired basalt reliefs (v3.1 decision 1), one station per work
+    const niche = isRelief ? makeRelief({ map: texLoader.load(rc.map), depthSpec: rc.spec, seed: rc.seed, impact: rc.impact }) : makeNiche(1.6, 1.05);
+    const nt = (isRelief ? rc.nt : 0.58 + i * 0.09);
     const np = curve.getPointAt(nt);
     const side = i % 2 === 0 ? 1 : -1;
     niche.scale.setScalar(isRelief ? 1.15 : 13);
     niche.position.set(np.x + side * (isRelief ? 52 : 44), np.y + 13, np.z);
-    if (isRelief) { reliefStation.pos.copy(niche.position); niche.rotation.y = -side * 0.35; niche.userData.isReliefRoot = true; window.__egRelief = niche; }
+    if (isRelief) { reliefStations.push({ pos: niche.position.clone(), side, gc: rc.gc, nt: rc.nt }); niche.rotation.y = -side * 0.35; niche.userData.isReliefRoot = true; if (i === 0) window.__egRelief = niche; else window.__egRelief2 = niche; }
     /* unrotated: plane fronts face +z, toward the approaching camera */
     scene.add(niche);
     texLoader.load(src, (tex) => { if (niche.userData.setImage) niche.userData.setImage(tex); });
@@ -364,8 +369,8 @@ export function createWorld(canvas) {
     propsUpdaters.push((t, pr, pq) => {
       let ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.075));
       if (isRelief) {
-        // relief arc unfolds during the approach and completes at the dwell (pq 0.58)
-        const a = Math.min(1, Math.max(0, (pq - 0.495) / 0.085));
+        // relief arc unfolds during the approach and completes at the dwell (gaze center gc)
+        const a = Math.min(1, Math.max(0, (pq - (rc.gc - 0.085)) / 0.085));
         ph = window.__egArcOverride != null ? window.__egArcOverride : a * a * (3 - 2 * a);
       }
       const ease = ph * ph * (3 - 2 * ph);
@@ -407,16 +412,18 @@ export function createWorld(canvas) {
   const plinth = new THREE.Mesh(plinthGeo, basalt);
   plinth.position.set(10, 5.2, -2344);
   plinth.rotation.y = -0.28;
-  scene.add(plinth);
+  const plinthGroup = new THREE.Group();
+  plinthGroup.add(plinth);
   const book = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.95, 4.2),
     new THREE.MeshStandardMaterial({ color: 0x2a1f16, roughness: 0.6, emissive: 0x3a2410, emissiveIntensity: 1.0 }));
   book.position.set(9.0, 11.4, -2344.2); book.rotation.y = -0.12;
-  scene.add(book);
+  plinthGroup.add(book);
   const seal = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.55, 0.65, 24),
     new THREE.MeshStandardMaterial({ color: 0xE8862E, emissive: 0xE8862E, emissiveIntensity: 0.55, roughness: 0.4 }));
   seal.position.set(12.8, 11.9, -2342.6);
   seal.rotation.x = -0.5;
-  scene.add(seal);
+  plinthGroup.add(seal);
+  scene.add(plinthGroup);
   {
     const plinthLight = new THREE.PointLight(0xFFD28A, 1100, 120, 2);
     plinthLight.position.set(5, 19, -2333);
@@ -427,6 +434,7 @@ export function createWorld(canvas) {
     propsUpdaters.push((t, pr) => {
       const ph = Math.min(1, Math.max(0, (pr - 0.88) / 0.10));
       seal.material.emissiveIntensity = 0.45 + ph * 0.8 + Math.sin(t * 1.7) * 0.1 * ph;
+      plinthGroup.visible = pr > 0.80; // the plinth belongs to the door act: no distant dark square on the horizon during the works acts
     });
   }
 
@@ -618,7 +626,7 @@ export function createWorld(canvas) {
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // station remap (camera-path spec v1.0 windows): dwell at stations, travel between
-  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.70,5/6],[0.74,5/6+0.004],[0.88,0.93],[1,1]];
+  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.66,0.830],[0.70,5/6],[0.74,5/6+0.004],[0.88,0.93],[1,1]]; // 0.56-0.66: second works station dwell (relief #2), same slope language as the first
   function pathT(pr) {
     for (let i = 1; i < REMAP.length; i++) {
       if (pr <= REMAP[i][0]) {
@@ -656,7 +664,7 @@ export function createWorld(canvas) {
     const rockIn = smooth(0.66, 0.72, prS); // S5 projection rock exists only in its own act
   rockMat.opacity = rockIn; rock.visible = rockIn > 0.01;
   const gateIn = smooth(0.84, 0.97, prS);
-    monoMat.opacity = 0.05 + 0.95 * smooth(0.70, 0.86, prS);
+    monoMat.opacity = 0.95 * smooth(0.70, 0.86, prS); // no 5% ghost on the horizon during the works acts
     doorMat.opacity = gateIn * 0.8;
     doorGlow.material.opacity = gateIn * 0.4;
 
@@ -680,15 +688,21 @@ export function createWorld(canvas) {
       pos.y + 6 + (scrollMoving ? 0 : Math.sin(t * 0.71 + 1.7) * 0.55),
       pos.z
     );
-    // fired-relief dwell: gaze eases from the road to the monolith and back
-    const rPh = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.58) / 0.075));
-    const rEase = rPh * rPh * (3 - 2 * rPh);
-    const lx = ahead.x * 0.6 + (reliefStation.pos.x + 3.2 - ahead.x * 0.6) * rEase; // gaze past face center: no right-edge crop at full dwell
-    const ly = (ahead.y - 8) + (reliefStation.pos.y + 1 - (ahead.y - 8)) * rEase;
-    const lz = ahead.z + (reliefStation.pos.z - ahead.z) * rEase;
+    // fired-relief dwells: gaze eases from the road to each monolith and back,
+    // crossfading between stations while traveling between dwells
+    let gx = 0, gy = 0, gz = 0, gw = 0;
+    for (const rs of reliefStations) {
+      const rPh = Math.min(1, Math.max(0, 1 - Math.abs(pq - rs.gc) / 0.075));
+      const w = rPh * rPh * (3 - 2 * rPh);
+      if (w <= 0) continue;
+      gx += (rs.pos.x + rs.side * 3.2) * w; gy += (rs.pos.y + 1) * w; gz += rs.pos.z * w; gw += w; // gaze past face center: no edge crop at full dwell
+    }
+    const lx = ahead.x * 0.6 + ((gw > 0 ? gx / gw : 0) - ahead.x * 0.6) * gw;
+    const ly = (ahead.y - 8) + ((gw > 0 ? gy / gw : 0) - (ahead.y - 8)) * gw;
+    const lz = ahead.z + ((gw > 0 ? gz / gw : 0) - ahead.z) * gw;
     camera.lookAt(lx, ly, lz);
     window.__egScene = scene; window.__egTHREE = THREE; window.__egCam = camera;
-    window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), relief: reliefStation.pos.toArray().map(v=>+v.toFixed(1)), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
+    window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), reliefs: reliefStations.map(rs => rs.pos.toArray().map(v=>+v.toFixed(1))), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
     camera.rotation.z += Math.sin(t * 0.32) * 0.006;
     const fov = fovAt(pq);
     if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }

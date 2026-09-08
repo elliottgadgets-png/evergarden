@@ -189,8 +189,20 @@ const cStage = document.querySelector('.cinema-stage');
 const cClose = document.querySelector('.cframe-close');
 function cinemaDrive(cf) {
   if (!cinemaTrack) return;
-  if (cf < 2.9 || cf > 5.1) return;
-  const p = Math.min(1, Math.max(0, (cf - 3.5) / 1.0));
+  if (cf > 5.1) return;
+  if (cf < 3.9) { // the story waits for its panel to fully take the viewport: no blurred words at screen edges during the works acts
+    if (cStage) cStage.style.opacity = '0';
+    if (cBurn) cBurn.style.opacity = '0';
+    return;
+  }
+  // the stage speaks only when its panel substantially covers the viewport -
+  // a sliver of panel at the screen edge must never carry blurred half-words
+  if (cStage) {
+    const r = cStage.getBoundingClientRect();
+    const visH = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
+    var stageCover = Math.min(1, visH / (innerHeight * 0.72));
+  }
+  const p = Math.min(1, Math.max(0, (cf - 4.03) / 0.72)); // plays inside the panel's full-cover window (pr ~0.66-0.79)
   cinemaTrack.style.transform = `translate3d(${p * (CF_N - 1) * innerWidth}px, 0, 0)`;
   if (cProg) cProg.style.transform = `scaleX(${p})`;
   // S5→S6 burn-through: the closing frame ignites and the kiln light blooms through
@@ -210,7 +222,10 @@ function cinemaDrive(cf) {
     el.style.opacity = o.toFixed(3);
     el.style.filter = (b > 0.1 || extra) ? `blur(${b.toFixed(1)}px)${extra}` : 'none';
   }
-  if (cStage) cStage.style.opacity = q > 0.75 ? String(Math.max(0, 1 - (q - 0.75) / 0.25).toFixed(3)) : '';
+  if (cStage) {
+    const qFade = q > 0.75 ? Math.max(0, 1 - (q - 0.75) / 0.25) : 1;
+    cStage.style.opacity = (qFade * (typeof stageCover === 'number' ? stageCover : 1)).toFixed(3);
+  }
   if (cBurn) {
     if (q > 0 && q < 1) {
       cBurn.style.opacity = String(Math.min(1, q * 1.15).toFixed(3));
@@ -241,6 +256,8 @@ function loop(t) {
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
   const plate = document.getElementById('plate-soshimi');
   if (plate) plate.classList.toggle('is-on', pr > 0.485 && pr < 0.545);
+  const plate2 = document.getElementById('plate-verdant');
+  if (plate2) plate2.classList.toggle('is-on', pr > 0.556 && pr < 0.610);
   const worksTitle = document.querySelector('.works-title');
   if (worksTitle) worksTitle.style.opacity = (pr > 0.478 && pr < 0.552) ? '0' : '';
   const worksInner = document.querySelector('.works-inner');

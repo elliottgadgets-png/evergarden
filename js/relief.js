@@ -21,6 +21,7 @@ const RELIEF_FRAG = /* glsl */`
   precision highp float;
   uniform sampler2D uMap, uDepth;
   uniform float uArc, uTime;
+  uniform vec2 uImp;
   uniform vec2 uTexel;
   varying vec2 vUv;
   float vnoise(vec2 p) {
@@ -57,7 +58,7 @@ const RELIEF_FRAG = /* glsl */`
     // glow runs along the carved walls and along wandering radial cracks
     float channels = smoothstep(0.44, 0.78, d); // heat lives in the carving
     float edge = clamp(length(vec2(dx, dy)) * 26.0, 0.0, 1.0); // the cut walls themselves
-    vec2 imp = vec2(0.38, 0.58); // ember impact, inside the deep rolls region
+    vec2 imp = uImp; // ember impact, authored inside the deepest carved region
     vec2 dir = vUv - imp; dir.x *= 1.6; // aspect-true radius
     float rad = length(dir);
     float ang = atan(dir.y, dir.x);
@@ -109,7 +110,22 @@ const SOSHIMI_DEPTH = {
   ],
 };
 
-export function makeRelief({ map, depthSpec }) {
+
+// The Sound Room (900x562): typographic headline carved deepest, product
+// grid close behind, chrome shallow. Light page - the carving carries it.
+const VERDANT_DEPTH = {
+  base: 0.42,
+  regions: [
+    [0.26, 0.14, 0.48, 0.30, 0.85],  // the headline - hero element, carved deepest
+    [0.05, 0.84, 0.90, 0.16, 0.78],  // instrument photo grid - deep, textured
+    [0.42, 0.51, 0.16, 0.09, 0.62],  // gold CTA button
+    [0.34, 0.44, 0.32, 0.06, 0.55],  // subtext line
+    [0.30, 0.71, 0.40, 0.07, 0.45],  // filter chips row
+    [0.00, 0.00, 1.00, 0.07, 0.34],  // nav strip - chrome, shallow
+  ],
+};
+
+export function makeRelief({ map, depthSpec, seed = 977, impact = [0.38, 0.58] }) {
   const group = new THREE.Group();
   const depthTex = buildDepthTexture(depthSpec);
   const mat = new THREE.ShaderMaterial({
@@ -118,6 +134,7 @@ export function makeRelief({ map, depthSpec }) {
       uMap: { value: map }, uDepth: { value: depthTex },
       uArc: { value: 0 }, uTime: { value: 0 },
       uTexel: { value: new THREE.Vector2(1 / 450, 1 / 281) },
+      uImp: { value: new THREE.Vector2(impact[0], impact[1]) },
     },
   });
   const face = new THREE.Mesh(new THREE.PlaneGeometry(33.8, 21.2, 130, 84), mat);
@@ -125,7 +142,7 @@ export function makeRelief({ map, depthSpec }) {
   group.add(face);
   // basalt slab body
   const slabGeo = new THREE.BoxGeometry(39, 27, 7.5, 11, 9, 3);
-  const sa = slabGeo.attributes.position; let ss = 977;
+  const sa = slabGeo.attributes.position; let ss = seed;
   const srn = () => { ss = (ss * 16807) % 2147483647; return ss / 2147483647; };
   for (let v = 0; v < sa.count; v++) {
     let x = sa.getX(v), y = sa.getY(v), z = sa.getZ(v);
@@ -151,4 +168,4 @@ export function makeRelief({ map, depthSpec }) {
   group.userData.update = (t, arc) => { mat.uniforms.uTime.value = t; mat.uniforms.uArc.value = arc; };
   return group;
 }
-export { SOSHIMI_DEPTH };
+export { SOSHIMI_DEPTH, VERDANT_DEPTH };
