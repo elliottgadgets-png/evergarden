@@ -5,6 +5,7 @@
 // Content stays in DOM; the world is WebGL. Built on the vendored three.js.
 
 import * as THREE from 'three';
+import { makeCrucible, makeNiche, makeBookSealStand } from './props.js';
 
 const NOISE = /* glsl */`
 vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}
@@ -280,6 +281,106 @@ export function createWorld(canvas) {
   gate.position.set(0, 0, -2380);
   scene.add(gate);
 
+
+  /* ---------- authored props (builder factories, re-materialized into the landscape) ---------- */
+  // scene has no global lights by design (shader world); each prop carries its own case-light.
+  const propsUpdaters = [];
+  const texLoader = new THREE.TextureLoader();
+
+  // S2 close: the crucible mid-pour beside the road — where the molten veins come from
+  const crucible = makeCrucible();
+  {
+    const cp = curve.getPointAt(0.285);
+    crucible.scale.setScalar(12);
+    crucible.position.set(cp.x + 12, 0, cp.z - 4);
+    crucible.rotation.y = 0.5;
+    scene.add(crucible);
+    const pourLight = new THREE.PointLight(0xE8862E, 900, 90, 2);
+    pourLight.position.set(cp.x + 12, 16, cp.z);
+    scene.add(pourLight);
+    propsUpdaters.push((t, pr, pq) => {
+      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.268) / 0.06));
+      crucible.userData.update(t, ph);
+      pourLight.intensity = 400 + ph * 1200;
+    });
+  }
+
+  // S4: three lit niches set into the canyon wall, each holding a finished piece
+  const nicheShots = ['assets/work-videoeditor.jpg', 'assets/work-verdant.jpg', 'assets/work-soshimi.jpg'];
+  nicheShots.forEach((src, i) => {
+    const niche = makeNiche(1.6, 1.05);
+    const nt = 0.55 + i * 0.05;
+    const np = curve.getPointAt(nt);
+    const side = i % 2 === 0 ? 1 : -1;
+    niche.scale.setScalar(8);
+    niche.position.set(np.x + side * 24, np.y + 15, np.z);
+    niche.lookAt(np.x * 0.85, np.y + 8, np.z + 140); niche.rotateY(Math.PI);
+    scene.add(niche);
+    texLoader.load(src, (tex) => niche.userData.setImage(tex));
+    const caseLight = new THREE.PointLight(0xFFD28A, 500, 70, 2);
+    caseLight.position.set(np.x + side * 17, np.y + 20, np.z + 20);
+    scene.add(caseLight);
+    propsUpdaters.push((t, pr, pq) => {
+      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.045));
+      niche.userData.update(t, ph);
+      caseLight.intensity = 200 + ph * 800;
+    });
+  });
+
+  // S7: the commission book + maker's seal on a plinth before the doorway — one frame with the CTA
+  const stand = makeBookSealStand();
+  stand.scale.setScalar(10);
+  stand.position.set(10, 0, -2344);
+  stand.rotation.y = -0.35;
+  scene.add(stand);
+  const book = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.7, 3.1),
+    new THREE.MeshStandardMaterial({ color: 0x2a1f16, roughness: 0.6 }));
+  scene.add(book);
+  const seal = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.5, 24),
+    new THREE.MeshStandardMaterial({ color: 0xE8862E, emissive: 0xE8862E, emissiveIntensity: 0.55, roughness: 0.4 }));
+  scene.add(seal);
+  {
+    // place book + seal on the stand's anchor points (world space)
+    stand.updateMatrixWorld(true);
+    const bA = stand.localToWorld(stand.userData.bookAnchor.clone());
+    const sA = stand.localToWorld(stand.userData.sealAnchor.clone());
+    book.position.copy(bA); book.position.y += 0.35; book.rotation.y = -0.35 + 0.2;
+    seal.position.copy(sA); seal.position.y += 0.25; seal.rotation.y = -0.35;
+    const plinthLight = new THREE.PointLight(0xFFD28A, 700, 90, 2);
+    plinthLight.position.set(7, 16, -2336);
+    scene.add(plinthLight);
+    propsUpdaters.push((t, pr) => {
+      const ph = Math.min(1, Math.max(0, (pr - 0.88) / 0.10));
+      seal.material.emissiveIntensity = 0.25 + ph * 0.6 + Math.sin(t * 1.7) * 0.08 * ph;
+    });
+  }
+
+  /* ---------- authored silhouettes: spires that thicken into the canyon ---------- */
+  const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true });
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < 22; i++) {
+    const st = 0.08 + (i / 22) * 0.86 + rnd() * 0.02;
+    const sp = curve.getPointAt(Math.min(0.98, st));
+    const side = rnd() > 0.5 ? 1 : -1;
+    const canyon = st > 0.32 && st < 0.60; // S3-S4: walls close in
+    const dist = canyon ? 34 + rnd() * 30 : 55 + rnd() * 70;
+    const h = canyon ? 70 + rnd() * 90 : 18 + rnd() * 45;
+    const r = 4 + rnd() * (canyon ? 10 : 7);
+    const geo = new THREE.ConeGeometry(r, h, 5 + Math.floor(rnd() * 3));
+    // irregular silhouette: jitter the cone's ring vertices
+    const posA = geo.attributes.position;
+    for (let v = 0; v < posA.count; v++) {
+      posA.setX(v, posA.getX(v) * (0.82 + rnd() * 0.4));
+      posA.setZ(v, posA.getZ(v) * (0.82 + rnd() * 0.4));
+    }
+    geo.computeVertexNormals();
+    const spire = new THREE.Mesh(geo, spireMat);
+    spire.position.set(sp.x + side * dist, h * 0.32, sp.z + (rnd() - 0.5) * 60);
+    spire.rotation.y = rnd() * Math.PI;
+    scene.add(spire);
+  }
+
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // station remap (camera-path spec v1.0 windows): dwell at stations, travel between
@@ -319,7 +420,12 @@ export function createWorld(canvas) {
     doorMat.opacity = gateIn * 0.8;
     doorGlow.material.opacity = gateIn * 0.4;
 
+    const warm = smooth(0.45, 0.85, prS);
+    scene.fog.color.setRGB(0.078 + warm * 0.05, 0.063 + warm * 0.012, 0.047);
+    tUni.uFogColor.value.copy(scene.fog.color); pathUni.uFogColor.value.copy(scene.fog.color);
+
     const pq = Math.min(0.999, pathT(prS));
+    for (const u of propsUpdaters) u(t, prS, pq);
     window.__stationCf = pq * 6;
     const scrollMoving = Math.abs(pr - (frame._lastPr ?? pr)) > 1e-5;
     frame._lastPr = pr;

@@ -119,10 +119,10 @@ if (isTouch) {
 // Each station's copy enters from blur-ahead, locks sharp at the camera beat,
 // and recedes (z + defocus) as the camera passes. Driven by chapter distance,
 // not scroll triggers; reveal-line IO remains as first-entry fallback.
-const copyBlocks = [...document.querySelectorAll('.panel')].map(p => ({
-  ch: parseInt(p.dataset.ch || '0', 10),
-  el: p.querySelector('.hero-copy, .sec-copy, .works-copy, .outro-inner, .cap') || p.querySelector('p, h1, h2'),
-})).filter(b => b.el);
+const copyBlocks = [...document.querySelectorAll('.panel')].map(p => {
+  const el = p.querySelector('.hero-copy, .sec-copy, .works-copy, .outro-inner, .cap') || p.querySelector('p, h1, h2');
+  return { ch: parseInt(p.dataset.ch || '0', 10), el, head: el && (el.querySelector('h1, h2, .hero-title, .sec-title') || null) };
+}).filter(b => b.el);
 function fluidCopy(cf) {
   for (const b of copyBlocks) {
     const d = cf - b.ch;
@@ -134,6 +134,7 @@ function fluidCopy(cf) {
     b.el.style.transform = `translateY(${(-d * 34).toFixed(1)}px) scale(${(1 - recede * 0.10).toFixed(3)})`;
     const bl = Math.min(9, ad * 8);
     b.el.style.filter = bl > 0.4 ? `blur(${bl.toFixed(1)}px)` : 'none';
+    if (b.head) b.head.style.letterSpacing = `calc(var(--base-track, 0em) + ${(ad * 0.13).toFixed(3)}em)`;
   }
 }
 

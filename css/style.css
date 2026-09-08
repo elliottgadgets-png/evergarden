@@ -154,7 +154,16 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 
 /* laptop stage (chapter 1) */
 .panel-laptop { justify-content: flex-end; }
-.laptop-stage { position: absolute; inset: 2%; z-index: 1; pointer-events: none; }
+.laptop-stage {
+  position: absolute; z-index: 1; pointer-events: none;
+  width: min(46vw, 620px); height: min(54vh, 480px);
+  right: 7vw; top: 16vh;
+  border: 16px solid #17110b; border-radius: 8px;
+  box-shadow: 0 40px 90px rgba(0,0,0,.75), 0 0 60px rgba(232,134,46,.14), inset 0 0 0 1px rgba(255,210,138,.12);
+  transform: perspective(1100px) rotateY(7deg) rotateX(1.5deg);
+  background: #0d0a07;
+  overflow: hidden;
+}
 .laptop-stage canvas { display: block; width: 100%; height: 100%; }
 .panel-laptop .cap { position: relative; z-index: 2; }
 
