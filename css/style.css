@@ -166,3 +166,37 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
   color: var(--dim); font-weight: 200;
 }
 .outro-pre { font-weight: 200; font-size: clamp(14px, 1.6vw, 20px); color: var(--dim); margin: 0 0 2vh; text-align: center; }
+
+/* v4.0 section copy system (markers / kickers / fragments / micro) */
+.sec-copy { display: flex; flex-direction: column; align-items: center; gap: 2.4vh; text-align: center; }
+.sec-marker { font-size: 11px; letter-spacing: .4em; font-weight: 400; color: var(--dim); margin: 0; }
+.sec-kicker {
+  font-family: var(--serif-he); font-weight: 900;
+  font-size: clamp(24px, 3.4vw, 46px); line-height: 1.2; margin: 0; max-width: 20em;
+}
+.sec-frag { font-weight: 200; font-size: clamp(13px, 1.4vw, 17px); letter-spacing: .08em; margin: 0; }
+.sec-micro { font-weight: 200; font-size: 12px; letter-spacing: .25em; color: var(--dim); margin: 0; }
+
+/* S3 proof grid — the measurements on the bench paper */
+.proof-grid {
+  position: relative; z-index: 2;
+  display: flex; gap: 3vw; justify-content: center; margin-top: 4vh;
+}
+.proof-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 22px; border: 1px solid currentColor; border-opacity: .25;
+}
+.proof-val { font-family: var(--serif-he); font-weight: 900; font-size: clamp(16px, 1.8vw, 24px); }
+.proof-key { font-weight: 200; font-size: 11px; letter-spacing: .2em; opacity: .7; }
+
+/* S3 surveyor crosshair — follows the pointer, latin digits by design */
+.crosshair { position: fixed; top: 0; left: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity .5s; }
+body[data-chapter="2"] .crosshair { opacity: 1; }
+.ch-h, .ch-v { position: fixed; background: currentColor; opacity: .35; }
+.ch-h { width: 300vw; height: 1px; top: 0; left: -150vw; }
+.ch-v { width: 1px; height: 300vh; top: -150vh; left: 0; }
+.ch-read {
+  position: fixed; top: 10px; left: 14px; direction: ltr;
+  font-family: monospace; font-size: 10px; letter-spacing: .12em; opacity: .65;
+}
+@media (pointer: coarse) { .crosshair { display: none; } }

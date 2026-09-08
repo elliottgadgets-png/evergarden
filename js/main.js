@@ -33,7 +33,7 @@ const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sound = createSound();
 const sections = createSectionRouter();
 const wordSys = createWordSystem(document.getElementById('word'), {
-  onChapter: i => sound.chapter(i),
+  onChapter: i => { sound.chapter(i); document.body.dataset.chapter = i; },
   onBurst: () => sound.burst()
 });
 const aurora = createAurora(document.getElementById('gl'), wordSys.mood);
@@ -47,7 +47,7 @@ if (soundBtn) soundBtn.addEventListener('click', () => {
 
 /* ---------- laptop scene (chapter 1) ---------- */
 let laptop = null;
-const laptopStage = document.querySelector('[data-ch="1"] .laptop-stage');
+const laptopStage = document.querySelector('[data-ch="2"] .laptop-stage');
 if (laptopStage && !prefersReduced) {
   import('./laptop.js').then(mod => { laptop = mod.init(laptopStage, { quality: 'auto' }); }).catch(() => {});
 }
@@ -104,12 +104,20 @@ if (virtual) {
 
 /* ---------- touch copy ---------- */
 if (isTouch) {
-  const c = document.querySelector('[data-ch="2"] .cap');
-  if (c) c.textContent = 'געו במסך — האותיות מרגישות אתכם';
+  const c = document.querySelector('[data-ch="1"] .sec-micro');
+  if (c) c.textContent = 'געו במסך — החומר מרגיש אתכם';
 }
 
 /* ---------- reveals (one motion language) ---------- */
 createRevealer();
+
+/* ---------- workbench crosshair (chapter 2) ---------- */
+const cross = document.querySelector('.crosshair');
+const chRead = cross ? cross.querySelector('.ch-read') : null;
+const chPos = { x: innerWidth / 2, y: innerHeight / 2 };
+if (cross && virtual) {
+  window.addEventListener('pointermove', e => { cross._tx = e.clientX; cross._ty = e.clientY; });
+}
 
 /* ---------- main loop ---------- */
 function loop(t) {
@@ -131,10 +139,17 @@ function loop(t) {
   wordSys.frame(t, pr);
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);
+  if (cross && document.body.dataset.chapter === '2') {
+    const tx = cross._tx ?? innerWidth / 2, ty = cross._ty ?? innerHeight / 2;
+    chPos.x += (tx - chPos.x) * 0.12;
+    chPos.y += (ty - chPos.y) * 0.12;
+    cross.style.transform = `translate(${chPos.x}px, ${chPos.y}px)`;
+    if (chRead) chRead.textContent = 'X:' + String(Math.round(chPos.x)).padStart(4, '0') + ' Y:' + String(Math.round(chPos.y)).padStart(4, '0');
+  }
   if (laptop) {
     const cf = pr * (CHAPTER_COUNT - 1);
-    if (cf > -0.4 && cf < 2.4) {
-      const lp = Math.min(1, Math.max(0, (cf - 0.42) / 1.12));
+    if (cf > 0.6 && cf < 3.4) {
+      const lp = Math.min(1, Math.max(0, (cf - 1.42) / 1.12));
       laptop.frame(t * 0.001, lp);
       if (virtual) laptop.setPointer((cur.tx / innerWidth) * 2 - 1, (cur.ty / innerHeight) * 2 - 1);
     }

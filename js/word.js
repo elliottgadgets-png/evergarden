@@ -7,17 +7,25 @@
 // screen, its own accent color, its own background. the scroll is a
 // journey between worlds, not a flipbook of the same frame.
 const CHAPTERS = [
-  { word: 'חוויה', pointer: 1.0, glow: 1.0, lift: 0.0,  spread: 0,
+  // S1 — the workshop at night: raw material, not yet a word (armature target comes from the builder)
+  { word: null,   pointer: 1.2, glow: 0.85, lift: 0.0, spread: 0,
     bg: [20,16,12],    accent: [232,134,46], cxOff: 0, tint: 0, ink: [236,231,222] },
+  // S2 — חוויה: the molten state
+  { word: 'חוויה', pointer: 1.0, glow: 1.0, lift: -0.15, spread: 0,
+    bg: [26,14,8],     accent: [255,154,60], cxOff: 0, tint: 0.3, ink: [236,231,222] },
+  // S3 — דיוק: the workbench (light world, laptop lives here)
   { word: 'דיוק',  pointer: 1.3, glow: 1.0, lift: 0.0,  spread: 0,
     bg: [244,241,234], accent: [255,77,0],  cxOff: -0.17, tint: 0.08, ink: [20,20,18] },
+  // S4 — עבודות: the gallery (dust in spot beams; works float over it)
+  { word: null,    pointer: 0.6, glow: 0.32, lift: -0.3, spread: 1,
+    bg: [14,12,10],    accent: [255,210,138], cxOff: 0, tint: 0, ink: [236,231,222] },
+  // S5 — סיפור: the maker's story (cinema dusk)
   { word: 'סיפור', pointer: 3.2, glow: 1.1, lift: 0.0,  spread: 0,
     bg: [25,20,16],    accent: [217,164,65], cxOff: 0.17, tint: 0.2, ink: [236,231,222] },
+  // S6 — אור: the kiln opens (light world)
   { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0,
     bg: [251,246,236], accent: [232,178,58], cxOff: 0, tint: 0.1, ink: [30,26,20] },
-  { word: null,    pointer: 0.6, glow: 0.32, lift: -0.3, spread: 1, // gallery dust: the works float over it
-    bg: [14,12,10],    accent: [255,210,138], cxOff: 0, tint: 0, ink: [236,231,222] },
-  // the commission book: the swarm resurrects into the invitation
+  // S7 — the commission book
   { word: 'בוא נבנה', pointer: 1.2, glow: 1.4, lift: 0.0, spread: 0, scale: 0.32, cyOff: -0.23,
     bg: [20,16,12],    accent: [232,134,46], cxOff: 0, tint: 0, ink: [236,231,222] },
 ];
