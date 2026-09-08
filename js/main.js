@@ -1,10 +1,11 @@
 // main.js — boot, virtual scroll, cursor, grain, choreography.
-import { createWordSystem, CHAPTER_COUNT } from './word.js';
-import { createSectionRouter } from './sections.js';
-import { createAurora } from './aurora.js';
 import { createSound } from './sound.js';
 import { createRevealer } from './motion.js';
 import { createParticleFX } from './fx-particles.js';
+import { createWorld } from './world.js';
+
+// v5.0 «המסע»: one continuous world. 7 chapters = 7 stretches of one road.
+const CHAPTER_COUNT = 7;
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,15 +31,18 @@ const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, 90);
 })();
 
-/* ---------- word system ---------- */
+/* ---------- the world + sound ---------- */
 const sound = createSound();
-const sections = createSectionRouter();
-const wordSys = createWordSystem(document.getElementById('word'), {
-  onChapter: i => { sound.chapter(i); document.body.dataset.chapter = i; },
-  onBurst: () => sound.burst()
-});
-const aurora = createAurora(document.getElementById('gl'), wordSys.mood);
-const pfx = createParticleFX();
+const world = createWorld(document.getElementById('gl'));
+const pfx = createParticleFX(); // S0 preloader spark only; chapter worlds retired
+let chapterCur = -1;
+function chapterUpdate(pr) {
+  const ci = Math.min(CHAPTER_COUNT - 1, Math.round(pr * (CHAPTER_COUNT - 1)));
+  if (ci === chapterCur) return;
+  chapterCur = ci;
+  document.body.dataset.chapter = ci;
+  sound.chapter(ci);
+}
 window.__egSound = sound;
 const soundBtn = document.getElementById('sound-toggle');
 if (soundBtn) soundBtn.addEventListener('click', () => {
@@ -68,7 +72,7 @@ function clampScroll(v) { return Math.max(0, Math.min(maxScroll, v)); }
 
 window.__eg = {
   setScroll(v) { scrollTarget = clampScroll(v); },
-  snap(v) { scrollTarget = clampScroll(v); scrollCurrent = scrollTarget; },
+  snap(v) { scrollTarget = clampScroll(v); scrollCurrent = scrollTarget; window.__egSnapWorld = true; },
   getScroll() { return scrollCurrent; },
   sectionTop(sel) { const el = document.querySelector(sel); return el ? el.offsetTop : -1; }
 };
@@ -155,6 +159,7 @@ const cFrames = cinemaTrack ? [...cinemaTrack.querySelectorAll('.cframe')] : [];
 const cProg = document.querySelector('.cinema-progress i');
 const CF_N = cFrames.length;
 const cBurn = document.querySelector('.cinema-burn');
+const cStage = document.querySelector('.cinema-stage');
 const cClose = document.querySelector('.cframe-close');
 function cinemaDrive(cf) {
   if (!cinemaTrack) return;
@@ -179,6 +184,7 @@ function cinemaDrive(cf) {
     el.style.opacity = o.toFixed(3);
     el.style.filter = (b > 0.1 || extra) ? `blur(${b.toFixed(1)}px)${extra}` : 'none';
   }
+  if (cStage) cStage.style.opacity = q > 0.75 ? String(Math.max(0, 1 - (q - 0.75) / 0.25).toFixed(3)) : '';
   if (cBurn) {
     if (q > 0 && q < 1) {
       cBurn.style.opacity = String(Math.min(1, q * 1.15).toFixed(3));
@@ -215,11 +221,9 @@ function loop(t) {
     const sv = shimmerCur.toFixed(1);
     if (shimmerMap._last !== sv) { shimmerMap.setAttribute('scale', sv); shimmerMap._last = sv; }
   }
-  aurora.frame(t);
-  wordSys.frame(t, pr);
-  pfx.frame(t * 0.001, pr * (CHAPTER_COUNT - 1));
+  world.frame(t, pr);
+  chapterUpdate(pr);
   sound.progress(pr);
-  sections.frame(t, pr, CHAPTER_COUNT);
   railUpdate();
   cinemaDrive(pr * (CHAPTER_COUNT - 1));
   if (cross && document.body.dataset.chapter === '2') {
@@ -245,7 +249,7 @@ const pre = document.getElementById('preloader');
 const count = document.getElementById('load-count');
 let p = 0;
 let fontsReady = false;
-wordSys.ready.then(() => { fontsReady = true; });
+document.fonts.ready.then(() => { fontsReady = true; });
 let spark = null;
 pfx.bootSpark().then(h => { spark = h; });
 // spark runs on its own clock until the main loop takes over
@@ -268,7 +272,9 @@ const tick = setInterval(() => {
 function openSite() {
   document.body.classList.add('is-open');
   createRevealer();
-  pfx.handoffToHero();
+  // spark's strike hands off to the world: fade the spark canvas out
+  const heroFx = document.getElementById('hero-fx');
+  if (heroFx) { heroFx.style.transition = 'opacity 1.2s ease .3s'; heroFx.style.opacity = '0'; }
   sparkAlive = false;
   pre.style.transition = 'opacity 1s ease';
   pre.style.opacity = '0';
