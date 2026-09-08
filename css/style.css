@@ -64,6 +64,14 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 .frame-mark { font-family: var(--serif-he); font-weight: 900; font-size: 20px; }
 .frame-seed { display: block; font-family: var(--sans-he); font-weight: 200; font-size: 9px; letter-spacing: .35em; opacity: .6; margin-top: 6px; direction: ltr; text-align: right; }
 .frame-status { font-size: 11px; letter-spacing: .25em; opacity: .8; display: flex; align-items: center; gap: 8px; }
+#sound-toggle {
+  background: none; border: 0; color: var(--dim); font: inherit;
+  font-size: 10px; letter-spacing: .35em; cursor: pointer;
+  padding: 4px 10px 4px 0; margin-left: 14px;
+  border-bottom: 1px solid transparent; transition: color .3s, border-color .3s;
+}
+#sound-toggle:hover { color: var(--bone); }
+#sound-toggle.is-on { color: var(--ember); border-bottom-color: var(--ember); }
 #status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ember); animation: pulse 2.4s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 

@@ -1,5 +1,6 @@
 // main.js — boot, virtual scroll, cursor, grain, choreography.
 import { createWordSystem } from './word.js';
+import { createSound } from './sound.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -26,7 +27,18 @@ const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 })();
 
 /* ---------- word system ---------- */
-const wordSys = createWordSystem(document.getElementById('word'));
+const sound = createSound();
+const wordSys = createWordSystem(document.getElementById('word'), {
+  onChapter: i => sound.chapter(i),
+  onBurst: () => sound.burst()
+});
+window.__egSound = sound;
+const soundBtn = document.getElementById('sound-toggle');
+if (soundBtn) soundBtn.addEventListener('click', () => {
+  const on = sound.toggle();
+  soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  soundBtn.classList.toggle('is-on', on);
+});
 
 /* ---------- virtual smooth scroll ---------- */
 const content = document.getElementById('scroll-content');
@@ -111,7 +123,9 @@ function loop(t) {
     dot.style.transform = `translate(${cur.tx - 2.5}px, ${cur.ty - 2.5}px)`;
     ring.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
   }
-  wordSys.frame(t, maxScroll ? scrollCurrent / maxScroll : 0);
+  const pr = maxScroll ? scrollCurrent / maxScroll : 0;
+  wordSys.frame(t, pr);
+  sound.progress(pr);
   requestAnimationFrame(loop);
 }
 

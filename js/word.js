@@ -57,7 +57,7 @@ function scatterPoints(W, H) {
   return out;
 }
 
-export function createWordSystem(canvas) {
+export function createWordSystem(canvas, hooks = {}) {
   const ctx = canvas.getContext('2d');
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   let W = 0, H = 0;
@@ -103,6 +103,7 @@ export function createWordSystem(canvas) {
 
   window.addEventListener('pointerdown', e => {
     held = true;
+    if (hooks.onBurst) hooks.onBurst();
     bursts.push({ x: e.clientX, y: e.clientY, t0: performance.now() });
     if (bursts.length > 4) bursts.shift();
   });
@@ -153,6 +154,7 @@ export function createWordSystem(canvas) {
     const ci = Math.min(N - 2, Math.floor(cf));
     const f = cf - ci;
     const A = chapters[ci], B = chapters[ci + 1];
+    if (hooks.onChapter && f < 0.04) hooks.onChapter(ci);
 
     // interpolate chapter behavior
     const pStr = A.pointer + (B.pointer - A.pointer) * f;
