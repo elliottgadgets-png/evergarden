@@ -42,8 +42,8 @@ export function createParticleFX() {
         { url: 'targets/s7-commission-book.png', x:  0.36, y: 0.86, scale: 0.27, tint: 0xF4F1EA },
         { url: 'targets/s7-seal-ring.png',       x: -0.46, y: 0.88, scale: 0.21, tint: 0xE8862E },
       ] : [
-        { url: 'targets/s7-commission-book.png', x:  0.34, y: 0.52, scale: 0.50, tint: 0xF4F1EA }, // book RIGHT, paper
-        { url: 'targets/s7-seal-ring.png',       x: -0.58, y: 0.56, scale: 0.37, tint: 0xE8862E }, // seal LEFT, ember
+        { url: 'targets/s7-commission-book.png', x:  0.34, y: 0.70, scale: 0.46, tint: 0xF4F1EA }, // book RIGHT, paper
+        { url: 'targets/s7-seal-ring.png',       x: -0.58, y: 0.74, scale: 0.34, tint: 0xE8862E }, // seal LEFT, ember
       ]});
     } catch (e) { outro = null; }
   }
