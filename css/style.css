@@ -34,6 +34,12 @@ body.native-scroll #scroll-content { position: static; }
   z-index: -2; display: block;
 }
 
+/* ---------- trail ---------- */
+#trail {
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  z-index: -1; pointer-events: none;
+}
+
 /* ---------- grain ---------- */
 #grain {
   position: fixed; inset: -100px; z-index: 40; pointer-events: none;
@@ -191,4 +197,9 @@ body:not(.native-scroll) .growth-sticky { position: relative; }
 @media (max-width: 720px) {
   .frame-nav { display: none; }
   #frame { padding: 18px 20px; }
+  .panel { padding: 10vh 7vw; }
+  .hero-title { font-size: clamp(44px, 15vw, 90px); }
+  .m-line { line-height: 1.65; }
+  .field-caption { margin-top: 62vh; padding: 0 8vw; }
+  #trail { display: none; }
 }

@@ -2,6 +2,7 @@
 import { createSky } from './sky.js';
 import { createField } from './field.js';
 import { createGrowth } from './growth.js';
+import { createTrail } from './trail.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -39,6 +40,9 @@ const growthSection = document.getElementById('growth');
 const growth = createGrowth(document.getElementById('growth-canvas'), growthSection);
 const growthPct = document.getElementById('growth-pct');
 const growthSticky = growthSection.querySelector('.growth-sticky');
+
+/* ---------- spore trail (pointer devices only) ---------- */
+const trail = !isTouch ? createTrail(document.getElementById('trail')) : null;
 
 /* ---------- virtual smooth scroll (desktop only) ---------- */
 const content = document.getElementById('scroll-content');
@@ -164,6 +168,7 @@ function loop(t) {
     sky.setScroll(maxScroll ? scrollCurrent / maxScroll : 0);
     sky.frame(t);
   }
+  if (trail) trail.frame();
   growth.draw(growthProgress(), growthPct);
 
   requestAnimationFrame(loop);
