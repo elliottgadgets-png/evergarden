@@ -44,6 +44,13 @@ if (soundBtn) soundBtn.addEventListener('click', () => {
   soundBtn.classList.toggle('is-on', on);
 });
 
+/* ---------- laptop scene (chapter 1) ---------- */
+let laptop = null;
+const laptopStage = document.querySelector('[data-ch="1"] .laptop-stage');
+if (laptopStage && !prefersReduced) {
+  import('./laptop.js').then(mod => { laptop = mod.init(laptopStage, { quality: 'auto' }); }).catch(() => {});
+}
+
 /* ---------- virtual smooth scroll ---------- */
 const content = document.getElementById('scroll-content');
 let scrollTarget = 0, scrollCurrent = 0, maxScroll = 0;
@@ -132,6 +139,14 @@ function loop(t) {
   wordSys.frame(t, pr);
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);
+  if (laptop) {
+    const cf = pr * (CHAPTER_COUNT - 1);
+    if (cf > -0.4 && cf < 2.4) {
+      const lp = Math.min(1, Math.max(0, (cf - 0.42) / 1.12));
+      laptop.frame(t * 0.001, lp);
+      if (virtual) laptop.setPointer((cur.tx / innerWidth) * 2 - 1, (cur.ty / innerHeight) * 2 - 1);
+    }
+  }
   requestAnimationFrame(loop);
 }
 
