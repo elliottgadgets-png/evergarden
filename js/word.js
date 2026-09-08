@@ -102,8 +102,8 @@ export function createWordSystem(canvas) {
     if (!chapters.length) return;
     if (!seeded) {
       for (let i = 0; i < COUNT; i++) {
-        px[i] = W / 2 + (Math.random() - 0.5) * W * 1.3;
-        py[i] = H / 2 + (Math.random() - 0.5) * H * 1.4;
+        px[i] = W / 2 + (Math.random() - 0.5) * W * 0.7;
+        py[i] = H / 2 + (Math.random() - 0.5) * H * 0.8;
       }
       seeded = true;
     }
@@ -122,7 +122,7 @@ export function createWordSystem(canvas) {
     const cx = W / 2, cy = H * 0.40;
     const R = 150 * Math.min(1.6, Math.max(0.7, pStr));
     const R2 = R * R;
-    const k = 0.012, damp = 0.88;
+    const k = 0.021, damp = 0.85;
     const mIn = pointer.x > -999;
 
     ctx.clearRect(0, 0, W, H);
@@ -136,7 +136,7 @@ export function createWordSystem(canvas) {
       const fi = smooth(Math.min(1, Math.max(0, f * 1.7 - stag[i] * 0.7)));
       const tx = cx + A.pts[i * 2] + (B.pts[i * 2] - A.pts[i * 2]) * fi;
       const ty = cy + A.pts[i * 2 + 1] + (B.pts[i * 2 + 1] - A.pts[i * 2 + 1]) * fi
-               + Math.sin(tt * 1.3 + wob[i]) * 1.2;
+               + Math.sin(tt * 1.3 + wob[i]) * 0.55;
 
       vx[i] += (tx - px[i]) * k;
       vy[i] += (ty - py[i]) * k;
@@ -159,7 +159,7 @@ export function createWordSystem(canvas) {
 
     // halo pass (sparse, cheap glow)
     ctx.fillStyle = `rgba(236,233,226,${0.05 * glow})`;
-    for (let i = 0; i < COUNT; i += 2) ctx.fillRect(px[i] - 3, py[i] - 3, 6, 6);
+    for (let i = 0; i < COUNT; i += 3) ctx.fillRect(px[i] - 3, py[i] - 3, 6, 6);
 
     // core pass, two tints
     ctx.fillStyle = `rgba(236,233,226,${Math.min(1, 0.85 * glow)})`;
