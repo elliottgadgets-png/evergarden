@@ -93,11 +93,15 @@ export function createWordSystem(canvas) {
 
   const pointer = { x: -9999, y: -9999 };
   const bursts = []; // {x, y, t0}
+  let held = false;
 
   window.addEventListener('pointerdown', e => {
+    held = true;
     bursts.push({ x: e.clientX, y: e.clientY, t0: performance.now() });
     if (bursts.length > 4) bursts.shift();
   });
+  window.addEventListener('pointerup', () => { held = false; });
+  window.addEventListener('pointercancel', () => { held = false; });
   window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; });
   window.addEventListener('pointerleave', () => { pointer.x = -9999; pointer.y = -9999; });
 
@@ -150,7 +154,13 @@ export function createWordSystem(canvas) {
       if (mIn) {
         const dx = px[i] - pointer.x, dy = py[i] - pointer.y;
         const d2 = dx * dx + dy * dy;
-        if (d2 < R2 && d2 > 0.01) {
+        if (held) {
+          // gravity well: holding the pointer pulls the letters toward you
+          const d = Math.sqrt(d2) || 1;
+          const pull = -Math.min(1.35, 9000 / (d2 + 900)) * pStr;
+          vx[i] += (dx / d) * pull - (dy / d) * pull * 0.5;
+          vy[i] += (dy / d) * pull + (dx / d) * pull * 0.5;
+        } else if (d2 < R2 && d2 > 0.01) {
           const d = Math.sqrt(d2);
           const force = (1 - d / R) * 2.6 * pStr;
           vx[i] += (dx / d) * force - (dy / d) * force * 0.45;
