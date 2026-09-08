@@ -3,15 +3,24 @@
 // assemble, morph between words on scroll, feel the visitor's pointer,
 // and finally scatter like embers. No libraries.
 
+// each chapter is its own world: its own word, its own corner of the
+// screen, its own accent color, its own background. the scroll is a
+// journey between worlds, not a flipbook of the same frame.
 const CHAPTERS = [
-  { word: 'נצח',   pointer: 1.0, glow: 1.0, lift: 0.0,  spread: 0 },
-  { word: 'תנועה', pointer: 1.3, glow: 1.0, lift: 0.0,  spread: 0 },
-  { word: 'מגע',   pointer: 3.2, glow: 1.1, lift: 0.0,  spread: 0 },
-  { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0 },
-  { word: null,    pointer: 1.2, glow: 0.75, lift: -1.1, spread: 1 }, // embers
+  { word: 'חוויה', pointer: 1.0, glow: 1.0, lift: 0.0,  spread: 0,
+    bg: [11,11,13],    accent: [245,194,107], cxOff: 0, tint: 0 },
+  { word: 'דיוק',  pointer: 1.3, glow: 1.0, lift: 0.0,  spread: 0,
+    bg: [18,24,54],    accent: [139,157,255], cxOff: -0.17, tint: 0.32 },
+  { word: 'סיפור', pointer: 3.2, glow: 1.1, lift: 0.0,  spread: 0,
+    bg: [12,44,37],    accent: [111,227,193], cxOff: 0.17, tint: 0.32 },
+  { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0,
+    bg: [46,17,30],    accent: [255,157,122], cxOff: 0, tint: 0.26 },
+  { word: null,    pointer: 1.2, glow: 0.75, lift: -1.1, spread: 1, // embers
+    bg: [11,11,13],    accent: [245,194,107], cxOff: 0 },
   // bloom: the embers remember what they were — the swarm resurrects
   // into the wordmark, smaller and higher, burning brighter.
-  { word: 'נצח',   pointer: 1.2, glow: 1.4, lift: 0.0,  spread: 0, scale: 0.4, cyOff: -0.23 },
+  { word: 'נצח',   pointer: 1.2, glow: 1.4, lift: 0.0,  spread: 0, scale: 0.4, cyOff: -0.23,
+    bg: [11,11,13],    accent: [245,194,107], cxOff: 0, tint: 0 },
 ];
 
 const COUNT = (typeof innerWidth !== 'undefined' && innerWidth < 720) ? 3200 : 6000;
@@ -130,6 +139,7 @@ export function createWordSystem(canvas, hooks = {}) {
   let energy = 0;   // scroll-velocity energy: fast scrolls shake the letters
   let lastProg = 0, lastT = 0;
   const smooth = t => t * t * (3 - 2 * t);
+  let lastBgCss = '';
 
   function frame(t, progress01) {
     if (!chapters.length) return;
@@ -161,9 +171,27 @@ export function createWordSystem(canvas, hooks = {}) {
     const glow = A.glow + (B.glow - A.glow) * f;
     const lift = A.lift + (B.lift - A.lift) * f;
 
-    const cx = W / 2;
+    const cxOff = (A.cxOff || 0) + ((B.cxOff || 0) - (A.cxOff || 0)) * f;
+    const cx = W / 2 + W * cxOff;
     const cyOff = (A.cyOff || 0) + ((B.cyOff || 0) - (A.cyOff || 0)) * f;
     const cy = H * (0.40 + cyOff);
+
+    // world colors: background and accent drift between chapters
+    const mix3 = (a, b) => a && b ? [
+      Math.round(a[0] + (b[0] - a[0]) * f),
+      Math.round(a[1] + (b[1] - a[1]) * f),
+      Math.round(a[2] + (b[2] - a[2]) * f)] : [11, 11, 13];
+    const bgc = mix3(A.bg, B.bg);
+    const acc = mix3(A.accent, B.accent);
+    const bgCss = `rgb(${bgc[0]},${bgc[1]},${bgc[2]})`;
+    if (bgCss !== lastBgCss) {
+      document.documentElement.style.setProperty('--ink', bgCss);
+      lastBgCss = bgCss;
+    }
+    const accCss = `${acc[0]},${acc[1]},${acc[2]}`;
+    const tint = (A.tint || 0) + ((B.tint || 0) - (A.tint || 0)) * f;
+    const core = [0, 1, 2].map(k => Math.round(236 + (acc[k] - 236) * tint * 0.9));
+    const coreCss = `${core[0]},${core[1]},${core[2]}`;
     const R = 150 * Math.min(1.6, Math.max(0.7, pStr));
     const R2 = R * R;
     const k = 0.021, damp = 0.85;
@@ -249,15 +277,15 @@ export function createWordSystem(canvas, hooks = {}) {
     if (!typed) typedMix = Math.max(0, typedMix - 0.02);
 
     // halo pass (sparse, cheap glow)
-    ctx.fillStyle = `rgba(236,233,226,${0.05 * glow})`;
+    ctx.fillStyle = `rgba(${coreCss},${0.05 * glow})`;
     for (let i = 0; i < COUNT; i += 3) ctx.fillRect(px[i] - 3, py[i] - 3, 6, 6);
 
     // core pass, two tints
-    ctx.fillStyle = `rgba(236,233,226,${Math.min(1, 0.85 * glow)})`;
+    ctx.fillStyle = `rgba(${coreCss},${Math.min(1, 0.85 * glow)})`;
     for (let i = 0; i < COUNT; i++) {
       if (!accent[i]) ctx.fillRect(px[i] - 0.8, py[i] - 0.8, 1.7, 1.7);
     }
-    ctx.fillStyle = `rgba(245,194,107,${Math.min(1, 0.95 * glow)})`;
+    ctx.fillStyle = `rgba(${accCss},${Math.min(1, 0.95 * glow)})`;
     for (let i = 0; i < COUNT; i++) {
       if (accent[i]) ctx.fillRect(px[i] - 0.9, py[i] - 0.9, 2.0, 2.0);
     }
