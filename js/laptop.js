@@ -57,8 +57,8 @@ function createScreenCanvas() {
 
     // page background
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#0d1512');
-    bg.addColorStop(1, '#080d0b');
+    bg.addColorStop(0, '#151009');
+    bg.addColorStop(1, '#0b0806');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
@@ -69,8 +69,8 @@ function createScreenCanvas() {
     const pulse = 0.5 + 0.5 * Math.sin(t * 1.4);
     const gx = W / 2, gy = 150;
     const orb = ctx.createRadialGradient(gx, gy, 0, gx, gy, 150 + 30 * pulse);
-    orb.addColorStop(0, `rgba(140, 245, 190, ${0.8 * glow})`);
-    orb.addColorStop(0.35, `rgba(80, 190, 140, ${0.42 * glow})`);
+    orb.addColorStop(0, `rgba(255, 170, 90, ${0.8 * glow})`);
+    orb.addColorStop(0.35, `rgba(232, 134, 46, ${0.42 * glow})`);
     orb.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = orb;
     ctx.fillRect(0, 0, W, H + 200);
@@ -93,7 +93,7 @@ function createScreenCanvas() {
     }
     ctx.restore();
     const subShim = 0.5 + 0.5 * Math.sin(t * 1.8);
-    ctx.fillStyle = `rgba(160, 205, 182, ${(0.35 + 0.3 * subShim) * glow})`;
+    ctx.fillStyle = `rgba(205, 170, 130, ${(0.35 + 0.3 * subShim) * glow})`;
     roundRect(ctx, gx - 70, 190, 140, 8, 4);
     ctx.fill();
 
@@ -102,15 +102,15 @@ function createScreenCanvas() {
     ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
     const nav = ['עבודות', 'שירותים', 'אודות', 'צור קשר'];
     nav.forEach((n, i) => {
-      ctx.fillStyle = `rgba(170, 215, 190, ${0.75 * glow})`;
+      ctx.fillStyle = `rgba(215, 190, 150, ${0.75 * glow})`;
       ctx.fillText(n, gx - 120 + i * 80, 62);
     });
     // CTA button
     const ctaPulse = 0.5 + 0.5 * Math.sin(t * 2.4);
-    ctx.fillStyle = `rgba(126, 231, 176, ${(0.85 + 0.15 * ctaPulse) * glow})`;
+    ctx.fillStyle = `rgba(232, 134, 46, ${(0.85 + 0.15 * ctaPulse) * glow})`;
     roundRect(ctx, gx - 62, 210, 124, 26, 13);
     ctx.fill();
-    ctx.fillStyle = `rgba(6, 14, 10, ${0.95 * glow})`;
+    ctx.fillStyle = `rgba(20, 10, 4, ${0.95 * glow})`;
     ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
     ctx.fillText('בואו נבנה', gx, 227);
 
@@ -119,7 +119,7 @@ function createScreenCanvas() {
       const y = 250 + i * 34;
       const wBars = 330 - (i % 3) * 55;
       const shimmer = 0.5 + 0.5 * Math.sin(t * 2 + i * 1.1);
-      ctx.fillStyle = `rgba(150, 210, 180, ${(0.22 + 0.22 * shimmer) * glow})`;
+      ctx.fillStyle = `rgba(210, 175, 130, ${(0.22 + 0.22 * shimmer) * glow})`;
       roundRect(ctx, gx - wBars / 2, y, wBars, 9, 4.5);
       ctx.fill();
     }
@@ -127,15 +127,15 @@ function createScreenCanvas() {
     // mini cards row
     for (let c = 0; c < 3; c++) {
       const cw = 150, ch = 90, cx = gx - 1.5 * cw - 20 + c * (cw + 20), cy = 590;
-      ctx.fillStyle = `rgba(24, 40, 32, ${0.95 * glow})`;
+      ctx.fillStyle = `rgba(38, 26, 16, ${0.95 * glow})`;
       roundRect(ctx, cx, cy, cw, ch, 10);
       ctx.fill();
-      ctx.strokeStyle = `rgba(110, 190, 150, ${0.25 * glow})`;
+      ctx.strokeStyle = `rgba(200, 140, 80, ${0.25 * glow})`;
       ctx.lineWidth = 1;
       roundRect(ctx, cx, cy, cw, ch, 10);
       ctx.stroke();
       const cardGlow = ctx.createRadialGradient(cx + cw / 2, cy + 34, 0, cx + cw / 2, cy + 34, 44);
-      cardGlow.addColorStop(0, `rgba(126,231,176,${(0.45 + 0.25 * Math.sin(t * 1.8 + c * 2)) * glow})`);
+      cardGlow.addColorStop(0, `rgba(232,134,46,${(0.45 + 0.25 * Math.sin(t * 1.8 + c * 2)) * glow})`);
       cardGlow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = cardGlow;
       ctx.fillRect(cx, cy, cw, ch);
@@ -147,23 +147,23 @@ function createScreenCanvas() {
       const my = (m.y - t * m.s) % H;
       const yy = my < 0 ? my + H : my;
       const a = (0.25 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2.2 + m.p * 9))) * glow;
-      ctx.fillStyle = `rgba(150, 235, 190, ${a})`;
+      ctx.fillStyle = `rgba(245, 190, 120, ${a})`;
       ctx.beginPath();
       ctx.arc(m.x, yy, m.r, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // browser chrome (fixed on top)
-    ctx.fillStyle = '#0d1412';
+    ctx.fillStyle = '#120e0a';
     ctx.fillRect(0, 0, W, 30);
     const dots = ['#e0705f', '#e0b25f', '#6fc97e'];
     dots.forEach((col, i) => {
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(18 + i * 16, 15, 4.4, 0, Math.PI * 2); ctx.fill();
     });
-    ctx.fillStyle = '#101a16';
+    ctx.fillStyle = '#1a140e';
     roundRect(ctx, 78, 8, W - 160, 14, 7); ctx.fill();
-    ctx.fillStyle = 'rgba(150,200,175,0.75)';
+    ctx.fillStyle = 'rgba(210,175,135,0.75)';
     ctx.font = '10px monospace';
     ctx.textAlign = 'left';
     ctx.fillText('your-site.co.il', 88, 18);
@@ -284,11 +284,11 @@ export function init(container, opts = {}) {
   camera.position.set(0, 1.55, 6.4);
 
   /* ---------- lights ---------- */
-  scene.add(new THREE.HemisphereLight(0x9fd8bc, 0x0a0d0c, 0.85));
+  scene.add(new THREE.HemisphereLight(0xd8b29f, 0x0d0a08, 0.85));
   const key = new THREE.DirectionalLight(0xfff2e0, 2.1);
   key.position.set(3, 5, 4);
   scene.add(key);
-  const screenGlowLight = new THREE.PointLight(0x7ee7b0, 0, 5.5, 2);
+  const screenGlowLight = new THREE.PointLight(0xe8862e, 0, 5.5, 2);
   screenGlowLight.position.set(0, 1.2, 1.4);
   scene.add(screenGlowLight);
 
@@ -355,11 +355,11 @@ export function init(container, opts = {}) {
   const emblemCanvas = document.createElement('canvas');
   emblemCanvas.width = emblemCanvas.height = 256;
   const ectx = emblemCanvas.getContext('2d');
-  ectx.shadowColor = '#7ee7b0'; ectx.shadowBlur = 34;
-  ectx.strokeStyle = '#a9f5cd';
+  ectx.shadowColor = '#e8862e'; ectx.shadowBlur = 34;
+  ectx.strokeStyle = '#ffb45e';
   ectx.lineWidth = 10;
   ectx.beginPath(); ectx.arc(128, 128, 52, 0, Math.PI * 2); ectx.stroke();
-  ectx.fillStyle = '#a9f5cd';
+  ectx.fillStyle = '#ffb45e';
   ectx.beginPath(); ectx.arc(128, 128, 16, 0, Math.PI * 2); ectx.fill();
   ectx.lineWidth = 6;
   for (let r = 0; r < 4; r++) {
@@ -384,7 +384,7 @@ export function init(container, opts = {}) {
   // screen glow halo (additive sprite behind/around the lid)
   const haloTex = createShadowTexture(); // radial gradient reused as glow shape
   const haloMat = new THREE.SpriteMaterial({
-    map: haloTex, color: 0x53d69a, transparent: true, opacity: 0,
+    map: haloTex, color: 0xe8862e, transparent: true, opacity: 0,
     blending: THREE.AdditiveBlending, depthWrite: false,
   });
   const halo = new THREE.Sprite(haloMat);

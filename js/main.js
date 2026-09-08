@@ -3,6 +3,7 @@ import { createWordSystem, CHAPTER_COUNT } from './word.js';
 import { createSectionRouter } from './sections.js';
 import { createAurora } from './aurora.js';
 import { createSound } from './sound.js';
+import { createRevealer } from './motion.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -107,17 +108,8 @@ if (isTouch) {
   if (c) c.textContent = 'געו במסך — האותיות מרגישות אתכם';
 }
 
-/* ---------- reveals ---------- */
-const io = new IntersectionObserver(entries => {
-  for (const en of entries) {
-    if (!en.isIntersecting) continue;
-    const el = en.target;
-    el.style.transition = 'opacity 1.2s cubic-bezier(.22,1,.36,1), transform 1.2s cubic-bezier(.22,1,.36,1)';
-    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
-    io.unobserve(el);
-  }
-}, { threshold: 0.2 });
-document.querySelectorAll('.reveal-line').forEach(el => io.observe(el));
+/* ---------- reveals (one motion language) ---------- */
+createRevealer();
 
 /* ---------- main loop ---------- */
 function loop(t) {

@@ -1,9 +1,11 @@
 /* ============ נצח — EVERGARDEN seed 002 ============ */
 :root {
-  --ink: #0b0b0d;
+  --ink: #14100c;
   --bone: #ece9e2;
+  --paper: #ece9e2;
   --dim: #8a877e;
-  --ember: #f5c26b;
+  --ember: #e8862e;
+  --case: #ffd28a;
   --serif-he: "Frank Ruhl Libre", serif;
   --sans-he: "Heebo", sans-serif;
 }
@@ -13,7 +15,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 html, body { background: var(--ink); }
 body {
   font-family: var(--sans-he);
-  color: var(--bone);
+  color: var(--paper, var(--bone));
   overflow-x: hidden;
   cursor: none;
   -webkit-font-smoothing: antialiased;
@@ -51,7 +53,7 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 }
 #load-count {
   font-family: var(--serif-he); font-weight: 300; font-size: clamp(60px, 10vw, 140px);
-  color: var(--bone); line-height: 1; direction: ltr;
+  color: var(--paper, var(--bone)); line-height: 1; direction: ltr;
 }
 #load-count::after { content: "%"; font-size: .35em; color: var(--dim); }
 
@@ -90,8 +92,8 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 .works-grid { display: flex; gap: 2vw; justify-content: center; align-items: stretch; flex-wrap: wrap; }
 .work-card {
   width: 26vw; min-width: 240px; max-width: 380px;
-  background: rgba(11,11,13,.78); backdrop-filter: blur(8px);
-  border: 1px solid rgba(236,233,226,.12); border-radius: 14px; overflow: hidden;
+  background: rgba(14,12,10,.78); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,210,138,.18); border-radius: 14px; overflow: hidden;
   transition: transform .45s cubic-bezier(.22,1,.36,1), border-color .45s, box-shadow .45s;
 }
 .work-card:hover { transform: translateY(-8px); border-color: var(--ember); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
@@ -132,7 +134,14 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 .om-link { color: var(--bone); border-bottom: 1px solid rgba(236,233,226,.3); padding-bottom: 4px; transition: color .3s, border-color .3s; }
 .om-link:hover { color: var(--ember); border-color: var(--ember); }
 
-.reveal-line { opacity: 0; transform: translateY(24px); }
+.reveal-line, [data-reveal] { opacity: 0; transform: translateY(30px); }
+.reveal-line.is-in, [data-reveal].is-in {
+  opacity: 1; transform: translateY(0);
+  transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-line, [data-reveal] { transform: none; }
+}
 
 @media (max-width: 720px) {
   #frame { padding: 18px 20px; }
@@ -144,3 +153,16 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 .laptop-stage { position: absolute; inset: 2%; z-index: 1; pointer-events: none; }
 .laptop-stage canvas { display: block; width: 100%; height: 100%; }
 .panel-laptop .cap { position: relative; z-index: 2; }
+
+/* v4.0 workshop: hero copy + preloader label + outro intro */
+.hero-copy { display: flex; flex-direction: column; align-items: center; gap: 2.2vh; text-align: center; }
+.hero-title {
+  font-family: var(--serif-he); font-weight: 900;
+  font-size: clamp(30px, 4.6vw, 62px); line-height: 1.15; margin: 0;
+}
+.hero-sub { font-weight: 200; font-size: clamp(14px, 1.5vw, 19px); letter-spacing: .06em; color: var(--dim); margin: 0; }
+#load-label {
+  position: absolute; bottom: 9vh; font-size: 11px; letter-spacing: .4em;
+  color: var(--dim); font-weight: 200;
+}
+.outro-pre { font-weight: 200; font-size: clamp(14px, 1.6vw, 20px); color: var(--dim); margin: 0 0 2vh; text-align: center; }

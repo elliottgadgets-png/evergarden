@@ -8,20 +8,29 @@
 // journey between worlds, not a flipbook of the same frame.
 const CHAPTERS = [
   { word: 'חוויה', pointer: 1.0, glow: 1.0, lift: 0.0,  spread: 0,
-    bg: [11,11,13],    accent: [245,194,107], cxOff: 0, tint: 0 },
+    bg: [20,16,12],    accent: [232,134,46], cxOff: 0, tint: 0, ink: [236,231,222] },
   { word: 'דיוק',  pointer: 1.3, glow: 1.0, lift: 0.0,  spread: 0,
-    bg: [18,24,54],    accent: [139,157,255], cxOff: -0.17, tint: 0.32 },
+    bg: [244,241,234], accent: [255,77,0],  cxOff: -0.17, tint: 0.08, ink: [20,20,18] },
   { word: 'סיפור', pointer: 3.2, glow: 1.1, lift: 0.0,  spread: 0,
-    bg: [12,44,37],    accent: [111,227,193], cxOff: 0.17, tint: 0.32 },
+    bg: [25,20,16],    accent: [217,164,65], cxOff: 0.17, tint: 0.2, ink: [236,231,222] },
   { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0,
-    bg: [46,17,30],    accent: [255,157,122], cxOff: 0, tint: 0.26 },
-  { word: null,    pointer: 0.6, glow: 0.32, lift: -0.3, spread: 1, // starfield: the works float over it; these are the embers
-    bg: [8,8,10],     accent: [245,194,107], cxOff: 0, tint: 0 },
-  // bloom: the embers remember what they were — the swarm resurrects
-  // into the wordmark, smaller and higher, burning brighter.
-  { word: 'נצח',   pointer: 1.2, glow: 1.4, lift: 0.0,  spread: 0, scale: 0.4, cyOff: -0.23,
-    bg: [11,11,13],    accent: [245,194,107], cxOff: 0, tint: 0 },
+    bg: [251,246,236], accent: [232,178,58], cxOff: 0, tint: 0.1, ink: [30,26,20] },
+  { word: null,    pointer: 0.6, glow: 0.32, lift: -0.3, spread: 1, // gallery dust: the works float over it
+    bg: [14,12,10],    accent: [255,210,138], cxOff: 0, tint: 0, ink: [236,231,222] },
+  // the commission book: the swarm resurrects into the invitation
+  { word: 'בוא נבנה', pointer: 1.2, glow: 1.4, lift: 0.0, spread: 0, scale: 0.32, cyOff: -0.23,
+    bg: [20,16,12],    accent: [232,134,46], cxOff: 0, tint: 0, ink: [236,231,222] },
 ];
+
+
+// dev hook: ?testlight=N renders chapter N as a light world (bone bg, dark ink)
+// to exercise the light-world path before the blueprint inversion lands.
+if (typeof location !== 'undefined') {
+  const tl = new URLSearchParams(location.search).get('testlight');
+  if (tl !== null && CHAPTERS[+tl]) {
+    Object.assign(CHAPTERS[+tl], { bg: [244,241,234], ink: [24,23,28], tint: 0.08 });
+  }
+}
 
 const COUNT = (typeof innerWidth !== 'undefined' && innerWidth < 720) ? 3200 : 6000;
 export const CHAPTER_COUNT = CHAPTERS.length;
@@ -190,10 +199,13 @@ export function createWordSystem(canvas, hooks = {}) {
       document.documentElement.style.setProperty('--ink', bgCss);
       lastBgCss = bgCss;
     }
+    const inkcNow = mix3(A.ink, B.ink);
+    document.documentElement.style.setProperty('--paper', `rgb(${inkcNow[0]},${inkcNow[1]},${inkcNow[2]})`);
     const accCss = `${acc[0]},${acc[1]},${acc[2]}`;
-    mood.bg = bgc; mood.accent = acc;
+    const inkc = mix3(A.ink, B.ink);
+    mood.bg = bgc; mood.accent = acc; mood.ink = inkc;
     const tint = (A.tint || 0) + ((B.tint || 0) - (A.tint || 0)) * f;
-    const core = [0, 1, 2].map(k => Math.round(236 + (acc[k] - 236) * tint * 0.9));
+    const core = [0, 1, 2].map(k => Math.round(inkc[k] + (acc[k] - inkc[k]) * tint * 0.9));
     const coreCss = `${core[0]},${core[1]},${core[2]}`;
     const R = 150 * Math.min(1.6, Math.max(0.7, pStr));
     const R2 = R * R;

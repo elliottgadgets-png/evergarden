@@ -27,11 +27,17 @@ export function createAurora(canvas, mood) {
       const x = W * (0.5 + 0.38 * Math.sin(tt * o.sp + o.ph));
       const y = H * (0.45 + 0.34 * Math.cos(tt * o.sp * 1.3 + o.ph * 1.7));
       const rad = Math.max(W, H) * o.r;
-      let c;
-      if (o.col === 'accent') c = mood.accent;
+      // light worlds: brightening orbs vanish on bone, so drift tinted shade instead
+      const lum = mood.bg ? 0.2126*mood.bg[0] + 0.7152*mood.bg[1] + 0.0722*mood.bg[2] : 0;
+      const light = lum > 140;
+      let c, a = o.a;
+      if (light) {
+        if (o.col === 'accent') { c = mood.accent.map(v => Math.round(v * 0.62)); a = o.a * 1.7; }
+        else { c = (mood.ink || [24,23,28]).map(v => Math.min(255, v + 70)); a = 0.09; }
+      } else if (o.col === 'accent') c = mood.accent;
       else c = mood.bg.map(v => Math.min(255, v * 3 + 18));
       const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${o.a})`);
+      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a})`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
