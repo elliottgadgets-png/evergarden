@@ -11,7 +11,7 @@ const CHAPTERS = [
   { word: null,    pointer: 1.2, glow: 0.75, lift: -1.1, spread: 1 }, // embers
 ];
 
-const COUNT = 6000;
+const COUNT = (typeof innerWidth !== 'undefined' && innerWidth < 720) ? 3200 : 6000;
 
 function sampleWord(word, boxW, boxH) {
   const fs = 240;
@@ -92,6 +92,7 @@ export function createWordSystem(canvas) {
   });
 
   const pointer = { x: -9999, y: -9999 };
+  let lastRealMove = 0;   // 0 = never moved: ghost starts active
   const bursts = []; // {x, y, t0}
   let held = false;
 
@@ -102,7 +103,7 @@ export function createWordSystem(canvas) {
   });
   window.addEventListener('pointerup', () => { held = false; });
   window.addEventListener('pointercancel', () => { held = false; });
-  window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; });
+  window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; lastRealMove = performance.now(); });
   window.addEventListener('pointerleave', () => { pointer.x = -9999; pointer.y = -9999; });
 
   let seeded = false;
@@ -133,12 +134,20 @@ export function createWordSystem(canvas) {
     const R = 150 * Math.min(1.6, Math.max(0.7, pStr));
     const R2 = R * R;
     const k = 0.021, damp = 0.85;
-    const mIn = pointer.x > -999;
-
     ctx.clearRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
 
     const tt = t * 0.001;
+
+    // ghost hand: when no real pointer for a while, an invisible visitor stirs the letters
+    const idle = t - lastRealMove > 6000 || lastRealMove === 0;
+    let gx = pointer.x, gy = pointer.y, mIn = pointer.x > -999;
+    if (idle) {
+      mIn = true;
+      const gt = tt * 0.45;
+      gx = W / 2 + Math.sin(gt) * W * 0.22 + Math.sin(gt * 2.7) * W * 0.06;
+      gy = H * 0.40 + Math.cos(gt * 1.3) * H * 0.12 + Math.sin(gt * 3.1) * H * 0.04;
+    }
 
     // single pass: physics + halo
     for (let i = 0; i < COUNT; i++) {
@@ -152,7 +161,8 @@ export function createWordSystem(canvas) {
       vy[i] += (ty - py[i]) * k;
 
       if (mIn) {
-        const dx = px[i] - pointer.x, dy = py[i] - pointer.y;
+        const dx = px[i] - gx, dy = py[i] - gy;
+        const idleSoft = idle ? 0.55 : 1;
         const d2 = dx * dx + dy * dy;
         if (held) {
           // gravity well: holding the pointer pulls the letters toward you
@@ -162,7 +172,7 @@ export function createWordSystem(canvas) {
           vy[i] += (dy / d) * pull + (dx / d) * pull * 0.5;
         } else if (d2 < R2 && d2 > 0.01) {
           const d = Math.sqrt(d2);
-          const force = (1 - d / R) * 2.6 * pStr;
+          const force = (1 - d / R) * 2.6 * pStr * idleSoft;
           vx[i] += (dx / d) * force - (dy / d) * force * 0.45;
           vy[i] += (dy / d) * force + (dx / d) * force * 0.45;
         }

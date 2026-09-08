@@ -70,6 +70,12 @@ if (virtual) {
   });
 }
 
+/* ---------- touch copy ---------- */
+if (isTouch) {
+  const c = document.querySelector('[data-ch="2"] .cap');
+  if (c) c.textContent = 'געו במסך — האותיות מרגישות אתכם';
+}
+
 /* ---------- reveals ---------- */
 const io = new IntersectionObserver(entries => {
   for (const en of entries) {
