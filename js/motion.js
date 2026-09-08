@@ -13,7 +13,7 @@ export function createRevealer() {
       en.target.classList.add('is-in');
       io.unobserve(en.target);
     }
-  }, { rootMargin: '0px 0px -18% 0px', threshold: 0 });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
   const scan = () => document.querySelectorAll('[data-reveal], .reveal-line').forEach(el => {
     if (!el.classList.contains('is-in')) io.observe(el);
   });
