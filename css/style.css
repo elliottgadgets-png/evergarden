@@ -211,3 +211,13 @@ body[data-chapter="2"] .crosshair { opacity: 1; }
 /* content hidden until the flint-strike finishes; openSite() reveals it */
 #scroll-content { opacity: 0; }
 body.is-open #scroll-content { opacity: 1; transition: opacity 1.1s ease .35s; }
+
+/* progress rail — 8 ticks per blueprint v4.0 §7 */
+#rail { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); z-index: 50; display: flex; flex-direction: column; gap: 14px; pointer-events: none; }
+.rt { display: flex; align-items: center; justify-content: flex-end; gap: 8px; direction: rtl; }
+.rt i { display: block; width: 12px; height: 1px; background: var(--dim, #6b675f); opacity: .55; transition: width .5s cubic-bezier(.16,1,.3,1), background .5s, opacity .5s; }
+.rt b { font-family: var(--sans-he, Heebo, sans-serif); font-weight: 200; font-size: 10px; letter-spacing: .18em; color: var(--ember, #E8862E); opacity: 0; transform: translateX(4px); transition: opacity .4s, transform .5s cubic-bezier(.16,1,.3,1); }
+.rt.done i { background: var(--steel, #7C8DA6); opacity: .8; }
+.rt.on i { width: 26px; background: var(--ember, #E8862E); opacity: 1; }
+.rt.on b { opacity: 1; transform: none; }
+@media (max-width: 760px) { .rt b { display: none; } #rail { right: 12px; gap: 11px; } }

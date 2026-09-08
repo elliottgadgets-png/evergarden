@@ -134,6 +134,21 @@ if (cross && virtual) {
   window.addEventListener('pointermove', e => { cross._tx = e.clientX; cross._ty = e.clientY; });
 }
 
+/* ---------- progress rail (8 ticks; S0 during preloader, then chapters+1) ---------- */
+const railTicks = [...document.querySelectorAll('#rail .rt')];
+let railIdx = -1;
+function railUpdate() {
+  const open = document.body.classList.contains('is-open');
+  const ch = parseInt(document.body.dataset.chapter || '0', 10);
+  const idx = open ? Math.min(7, ch + 1) : 0;
+  if (idx === railIdx) return;
+  railIdx = idx;
+  railTicks.forEach((el, i) => {
+    el.classList.toggle('on', i === idx);
+    el.classList.toggle('done', i < idx);
+  });
+}
+
 /* ---------- S4 glass shimmer: scroll velocity bends the case glass ---------- */
 const shimmerMap = document.querySelector('#glass-shimmer feDisplacementMap');
 let shimmerV = 0, shimmerCur = 0, lastScroll = 0;
@@ -167,6 +182,7 @@ function loop(t) {
   pfx.frame(t * 0.001, pr * (CHAPTER_COUNT - 1));
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);
+  railUpdate();
   if (cross && document.body.dataset.chapter === '2') {
     const tx = cross._tx ?? innerWidth / 2, ty = cross._ty ?? innerHeight / 2;
     chPos.x += (tx - chPos.x) * 0.12;
