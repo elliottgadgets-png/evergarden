@@ -1,6 +1,7 @@
 // main.js — boot, virtual scroll, cursor, grain, choreography.
 import { createWordSystem, CHAPTER_COUNT } from './word.js';
 import { createSectionRouter } from './sections.js';
+import { createAurora } from './aurora.js';
 import { createSound } from './sound.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -34,6 +35,7 @@ const wordSys = createWordSystem(document.getElementById('word'), {
   onChapter: i => sound.chapter(i),
   onBurst: () => sound.burst()
 });
+const aurora = createAurora(document.getElementById('gl'), wordSys.mood);
 window.__egSound = sound;
 const soundBtn = document.getElementById('sound-toggle');
 if (soundBtn) soundBtn.addEventListener('click', () => {
@@ -126,6 +128,7 @@ function loop(t) {
     ring.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
   }
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
+  aurora.frame(t);
   wordSys.frame(t, pr);
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);

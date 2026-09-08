@@ -141,6 +141,7 @@ export function createWordSystem(canvas, hooks = {}) {
   let lastProg = 0, lastT = 0;
   const smooth = t => t * t * (3 - 2 * t);
   let lastBgCss = '';
+  const mood = { bg: [11, 11, 13], accent: [245, 194, 107] };
 
   function frame(t, progress01) {
     if (!chapters.length) return;
@@ -190,6 +191,7 @@ export function createWordSystem(canvas, hooks = {}) {
       lastBgCss = bgCss;
     }
     const accCss = `${acc[0]},${acc[1]},${acc[2]}`;
+    mood.bg = bgc; mood.accent = acc;
     const tint = (A.tint || 0) + ((B.tint || 0) - (A.tint || 0)) * f;
     const core = [0, 1, 2].map(k => Math.round(236 + (acc[k] - 236) * tint * 0.9));
     const coreCss = `${core[0]},${core[1]},${core[2]}`;
@@ -294,5 +296,5 @@ export function createWordSystem(canvas, hooks = {}) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  return { ready, frame };
+  return { ready, frame, mood };
 }
