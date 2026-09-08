@@ -52,12 +52,7 @@ if (soundBtn) soundBtn.addEventListener('click', () => {
   soundBtn.classList.toggle('is-on', on);
 });
 
-/* ---------- laptop scene (chapter 1) ---------- */
-let laptop = null;
-const laptopStage = document.querySelector('[data-ch="2"] .laptop-stage');
-if (laptopStage && !prefersReduced) {
-  import('./laptop.js').then(mod => { laptop = mod.init(laptopStage, { quality: 'auto' }); }).catch(() => {});
-}
+/* laptop now lives in the world as the S3 monument (world.js) */
 
 /* ---------- virtual smooth scroll ---------- */
 const content = document.getElementById('scroll-content');
@@ -120,21 +115,27 @@ if (isTouch) {
 // and recedes (z + defocus) as the camera passes. Driven by chapter distance,
 // not scroll triggers; reveal-line IO remains as first-entry fallback.
 const copyBlocks = [...document.querySelectorAll('.panel')].map(p => {
-  const el = p.querySelector('.hero-copy, .sec-copy, .works-copy, .outro-inner, .cap') || p.querySelector('p, h1, h2');
-  return { ch: parseInt(p.dataset.ch || '0', 10), el, head: el && (el.querySelector('h1, h2, .hero-title, .sec-title') || null) };
-}).filter(b => b.el);
+  const el = p.querySelector('.hero-copy, .sec-copy, .works-copy, .outro-inner, .cap, .works-inner') || p.querySelector('p, h1, h2');
+  const lines = el ? [...el.children] : [];
+  return { ch: parseInt(p.dataset.ch || '0', 10), el, lines };
+}).filter(b => b.el && b.lines.length);
 function fluidCopy(cf) {
   for (const b of copyBlocks) {
-    const d = cf - b.ch;
-    const ad = Math.abs(d);
-    if (ad > 1.6) { if (b.el.style.opacity !== '0') b.el.style.opacity = '0'; continue; }
-    const vis = Math.min(1, Math.max(0, 1.25 - ad * 1.15));
-    const recede = Math.min(1, ad / 1.6);
-    b.el.style.opacity = vis.toFixed(3);
-    b.el.style.transform = `translateY(${(-d * 34).toFixed(1)}px) scale(${(1 - recede * 0.10).toFixed(3)})`;
-    const bl = Math.min(9, ad * 8);
-    b.el.style.filter = bl > 0.4 ? `blur(${bl.toFixed(1)}px)` : 'none';
-    if (b.head) b.head.style.letterSpacing = `calc(var(--base-track, 0em) + ${(ad * 0.13).toFixed(3)}em)`;
+    b.lines.forEach((ln, i) => {
+      const d = cf - b.ch - i * 0.055;              // baseline stagger: lines arrive in sequence
+      const ad = Math.abs(d);
+      if (ad > 1.6) { if (ln.style.opacity !== '0') ln.style.opacity = '0'; return; }
+      const t0 = Math.min(1, Math.max(0, 1.25 - ad * 1.15));
+      const vis = t0 * t0 * (3 - 2 * t0);
+      const sharp = 1 - Math.min(1, ad * 1.3);
+      ln.style.opacity = vis.toFixed(3);
+      ln.style.transform = `translateY(${(-d * 30).toFixed(1)}px) scale(${(0.94 + sharp * 0.06).toFixed(3)})`;
+      const bl = Math.min(9, ad * 8);
+      ln.style.filter = bl > 0.4 ? `blur(${bl.toFixed(1)}px)` : 'none';
+      const head = (ln.matches && ln.matches('h1, h2, .hero-title, .sec-title, .works-title, .cf-big')) ? ln : (ln.querySelector ? ln.querySelector('h1, h2, .hero-title, .sec-title, .works-title, .cf-big') : null);
+      if (head) head.style.letterSpacing = `calc(var(--base-track, 0em) + ${(ad * 0.12).toFixed(3)}em)`;
+      if (ln.tagName === 'P' && !head) ln.style.fontVariationSettings = `'wght' ${(205 + sharp * 165) | 0}`;
+    });
   }
 }
 
@@ -259,14 +260,6 @@ function loop(t) {
     chPos.y += (ty - chPos.y) * 0.12;
     cross.style.transform = `translate(${chPos.x}px, ${chPos.y}px)`;
     if (chRead) chRead.textContent = 'X:' + String(Math.round(chPos.x)).padStart(4, '0') + ' Y:' + String(Math.round(chPos.y)).padStart(4, '0');
-  }
-  if (laptop) {
-    const cf = pr * (CHAPTER_COUNT - 1);
-    if (cf > 0.6 && cf < 3.4) {
-      const lp = Math.min(1, Math.max(0, (cf - 1.42) / 1.12));
-      laptop.frame(t * 0.001, lp);
-      if (virtual) laptop.setPointer((cur.tx / innerWidth) * 2 - 1, (cur.ty / innerHeight) * 2 - 1);
-    }
   }
   requestAnimationFrame(loop);
 }

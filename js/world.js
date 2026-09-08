@@ -285,6 +285,7 @@ export function createWorld(canvas) {
   /* ---------- authored props (builder factories, re-materialized into the landscape) ---------- */
   // scene has no global lights by design (shader world); each prop carries its own case-light.
   const propsUpdaters = [];
+  const basalt2 = () => new THREE.MeshStandardMaterial({ color: 0x1c1510, roughness: 0.95, metalness: 0.04 });
   const texLoader = new THREE.TextureLoader();
 
   // S2 close: the crucible mid-pour beside the road — where the molten veins come from
@@ -295,6 +296,16 @@ export function createWorld(canvas) {
     crucible.position.set(cp.x + 12, 0, cp.z - 4);
     crucible.rotation.y = 0.5;
     scene.add(crucible);
+    // grounding: molten pool where the pour lands + a glowing stream from the lip
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(7, 28),
+      new THREE.MeshBasicMaterial({ color: 0xE8862E, transparent: true, opacity: 0, fog: false, toneMapped: false }));
+    pool.rotation.x = -Math.PI / 2; pool.position.set(cp.x + 20, 0.4, cp.z - 2);
+    scene.add(pool);
+    const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.7, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xF4C56B, transparent: true, opacity: 0, fog: false, toneMapped: false }));
+    stream.position.set(cp.x + 17.5, 8, cp.z - 3);
+    stream.rotation.z = 0.35;
+    scene.add(stream);
     const pourLight = new THREE.PointLight(0xE8862E, 900, 90, 2);
     pourLight.position.set(cp.x + 12, 16, cp.z);
     scene.add(pourLight);
@@ -302,6 +313,9 @@ export function createWorld(canvas) {
       const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.268) / 0.06));
       crucible.userData.update(t, ph);
       pourLight.intensity = 400 + ph * 1200;
+      pool.material.opacity = ph * 0.75;
+      stream.material.opacity = Math.max(0, ph - 0.45) * 1.6;
+      stream.scale.y = 0.4 + ph * 0.6;
     });
   }
 
@@ -312,48 +326,155 @@ export function createWorld(canvas) {
     const nt = 0.55 + i * 0.05;
     const np = curve.getPointAt(nt);
     const side = i % 2 === 0 ? 1 : -1;
-    niche.scale.setScalar(8);
-    niche.position.set(np.x + side * 24, np.y + 15, np.z);
-    niche.lookAt(np.x * 0.85, np.y + 8, np.z + 140); niche.rotateY(Math.PI);
+    niche.scale.setScalar(13);
+    niche.position.set(np.x + side * 38, np.y + 12, np.z);
+    /* unrotated: plane fronts face +z, toward the approaching camera */
     scene.add(niche);
     texLoader.load(src, (tex) => niche.userData.setImage(tex));
+    const back = new THREE.Mesh(new THREE.BoxGeometry(46, 32, 10), basalt2());
+    back.position.copy(niche.position); back.position.z -= 7;
+    scene.add(back);
     const caseLight = new THREE.PointLight(0xFFD28A, 500, 70, 2);
     caseLight.position.set(np.x + side * 17, np.y + 20, np.z + 20);
     scene.add(caseLight);
     propsUpdaters.push((t, pr, pq) => {
-      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.045));
+      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.07));
       niche.userData.update(t, ph);
-      caseLight.intensity = 200 + ph * 800;
+      caseLight.intensity = 150 + ph * 450;
     });
   });
 
-  // S7: the commission book + maker's seal on a plinth before the doorway — one frame with the CTA
-  const stand = makeBookSealStand();
-  stand.scale.setScalar(10);
-  stand.position.set(10, 0, -2344);
-  stand.rotation.y = -0.35;
-  scene.add(stand);
-  const book = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.7, 3.1),
-    new THREE.MeshStandardMaterial({ color: 0x2a1f16, roughness: 0.6 }));
+  // S7: the commission book + maker's seal on a sculpted basalt plinth before the doorway
+  const basalt = new THREE.MeshStandardMaterial({ color: 0x201812, roughness: 0.92, metalness: 0.05 });
+  const plinthGeo = new THREE.BoxGeometry(6.5, 8.5, 4.5, 4, 6, 3);
+  {
+    const pa = plinthGeo.attributes.position;
+    let s2 = 31;
+    const rn = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
+    for (let v = 0; v < pa.count; v++) {
+      pa.setX(v, pa.getX(v) + (rn() - 0.5) * 0.7);
+      pa.setZ(v, pa.getZ(v) + (rn() - 0.5) * 0.7);
+      pa.setY(v, pa.getY(v) + (rn() - 0.5) * 0.4);
+    }
+    plinthGeo.computeVertexNormals();
+  }
+  const plinth = new THREE.Mesh(plinthGeo, basalt);
+  plinth.position.set(10, 3.6, -2344);
+  plinth.rotation.y = -0.28;
+  scene.add(plinth);
+  const book = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.65, 3.0),
+    new THREE.MeshStandardMaterial({ color: 0x2a1f16, roughness: 0.6, emissive: 0x241204, emissiveIntensity: 0.7 }));
+  book.position.set(9.2, 8.2, -2344.2); book.rotation.y = -0.12;
   scene.add(book);
-  const seal = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.5, 24),
+  const seal = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.45, 24),
     new THREE.MeshStandardMaterial({ color: 0xE8862E, emissive: 0xE8862E, emissiveIntensity: 0.55, roughness: 0.4 }));
+  seal.position.set(12.2, 8.1, -2343.4);
   scene.add(seal);
   {
-    // place book + seal on the stand's anchor points (world space)
-    stand.updateMatrixWorld(true);
-    const bA = stand.localToWorld(stand.userData.bookAnchor.clone());
-    const sA = stand.localToWorld(stand.userData.sealAnchor.clone());
-    book.position.copy(bA); book.position.y += 0.35; book.rotation.y = -0.35 + 0.2;
-    seal.position.copy(sA); seal.position.y += 0.25; seal.rotation.y = -0.35;
     const plinthLight = new THREE.PointLight(0xFFD28A, 700, 90, 2);
-    plinthLight.position.set(7, 16, -2336);
+    plinthLight.position.set(6, 14, -2334);
     scene.add(plinthLight);
     propsUpdaters.push((t, pr) => {
       const ph = Math.min(1, Math.max(0, (pr - 0.88) / 0.10));
       seal.material.emissiveIntensity = 0.25 + ph * 0.6 + Math.sin(t * 1.7) * 0.08 * ph;
     });
   }
+
+
+  /* ---------- S3 monument: basalt slab with a living site-screen ---------- */
+  const monGp = curve.getPointAt(0.44);
+  const monGeo = new THREE.BoxGeometry(24, 34, 4.5, 4, 6, 2);
+  {
+    const pa = monGeo.attributes.position;
+    let s3 = 11;
+    const rn = () => { s3 = (s3 * 16807) % 2147483647; return s3 / 2147483647; };
+    for (let v = 0; v < pa.count; v++) {
+      if (Math.abs(pa.getZ(v)) < 2) continue; // keep the screen face flat
+      pa.setX(v, pa.getX(v) + (rn() - 0.5) * 1.4);
+      pa.setY(v, pa.getY(v) + (rn() - 0.5) * 0.9);
+    }
+    monGeo.computeVertexNormals();
+  }
+  const monument = new THREE.Mesh(monGeo, basalt);
+  monument.position.set(monGp.x - 24, 15, monGp.z - 6);
+  monument.rotation.y = 0.42;
+  scene.add(monument);
+  // living mini-site on the screen face
+  const scrC = document.createElement('canvas'); scrC.width = 512; scrC.height = 320;
+  const scrX = scrC.getContext('2d');
+  function drawMiniSite(gl) {
+    scrX.fillStyle = '#0c0e11'; scrX.fillRect(0, 0, 512, 320);
+    scrX.fillStyle = '#171a1f'; scrX.fillRect(0, 0, 512, 44);
+    scrX.fillStyle = '#e86a5e'; scrX.beginPath(); scrX.arc(496, 22, 6, 0, 7); scrX.fill();
+    scrX.fillStyle = '#e8b95e'; scrX.beginPath(); scrX.arc(476, 22, 6, 0, 7); scrX.fill();
+    scrX.fillStyle = '#7ec97e'; scrX.beginPath(); scrX.arc(456, 22, 6, 0, 7); scrX.fill();
+    scrX.fillStyle = '#23272e'; scrX.fillRect(30, 12, 380, 22);
+    scrX.fillStyle = '#8a877e'; scrX.font = '13px sans-serif'; scrX.textAlign = 'left';
+    scrX.fillText('your-site.co.il', 42, 28);
+    scrX.strokeStyle = `rgba(232,134,46,${0.5 + gl * 0.5})`; scrX.lineWidth = 3;
+    scrX.beginPath(); scrX.arc(256, 108, 22, 0, 7); scrX.stroke();
+    scrX.fillStyle = `rgba(232,134,46,${0.6 + gl * 0.4})`; scrX.beginPath(); scrX.arc(256, 108, 7, 0, 7); scrX.fill();
+    scrX.fillStyle = '#d8d2c4';
+    [0, 1].forEach(r => { scrX.globalAlpha = 0.85 - r * 0.25; scrX.fillRect(156, 152 + r * 22, 200 - r * 60, 9); });
+    scrX.globalAlpha = 0.5;
+    [0, 1, 2].forEach(r => scrX.fillRect(176, 210 + r * 16, 160 - r * 24, 5));
+    scrX.globalAlpha = 1;
+    scrX.fillStyle = '#E8862E'; scrX.fillRect(206, 268, 100, 26);
+    scrX.fillStyle = '#0b0b0d'; scrX.font = 'bold 13px sans-serif'; scrX.textAlign = 'center';
+    scrX.fillText('דברו איתי', 256, 286);
+  }
+  drawMiniSite(0.5);
+  const scrTex = new THREE.CanvasTexture(scrC);
+  scrTex.colorSpace = THREE.SRGBColorSpace;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(19, 12),
+    new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false }));
+  screen.position.set(0, 3, 2.28);
+  monument.add(screen);
+  const monLight = new THREE.PointLight(0xE8862E, 350, 80, 2);
+  monLight.position.set(monGp.x - 16, 18, monGp.z + 14);
+  scene.add(monLight);
+  propsUpdaters.push((t, pr, pq) => {
+    const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.44) / 0.10));
+    monLight.intensity = 120 + ph * 500;
+    if (ph > 0.05 && (!frame._miniT || t - frame._miniT > 0.5)) {
+      frame._miniT = t;
+      drawMiniSite(0.4 + 0.6 * Math.abs(Math.sin(t * 0.8)));
+      scrTex.needsUpdate = true;
+    }
+  });
+
+
+  /* ---------- S5: the projection rock — the film plays on the land ---------- */
+  const rockGp = curve.getPointAt(0.84);
+  const rockGeo = new THREE.BoxGeometry(84, 46, 6, 7, 5, 1);
+  {
+    const pa = rockGeo.attributes.position;
+    let s4 = 53;
+    const rn = () => { s4 = (s4 * 16807) % 2147483647; return s4 / 2147483647; };
+    for (let v = 0; v < pa.count; v++) {
+      if (pa.getZ(v) > 2) continue; // screen face stays flat
+      pa.setX(v, pa.getX(v) + (rn() - 0.5) * 2.2);
+      pa.setY(v, pa.getY(v) + (rn() - 0.5) * 1.6);
+    }
+    rockGeo.computeVertexNormals();
+  }
+  const rock = new THREE.Mesh(rockGeo, basalt);
+  rock.position.set(rockGp.x - 2, 34, rockGp.z - 12);
+  rock.rotation.y = 0.12;
+  scene.add(rock);
+  const projMat = new THREE.MeshBasicMaterial({ color: 0x8a5a28, transparent: true, opacity: 0, toneMapped: false, fog: false });
+  const proj = new THREE.Mesh(new THREE.PlaneGeometry(60, 34), projMat);
+  proj.position.set(0, 2, 4.6);
+  rock.add(proj);
+  const projLight = new THREE.PointLight(0xE8862E, 0, 160, 2);
+  projLight.position.set(rockGp.x - 2, 40, rockGp.z + 10);
+  scene.add(projLight);
+  propsUpdaters.push((t, pr, pq) => {
+    const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.835) / 0.13));
+    const flick = 0.85 + 0.15 * Math.sin(t * 13.0) * Math.sin(t * 7.3);
+    projMat.opacity = ph * 0.9 * flick;
+    projLight.intensity = ph * 1500 * flick;
+  });
 
   /* ---------- authored silhouettes: spires that thicken into the canyon ---------- */
   const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true });
@@ -441,6 +562,7 @@ export function createWorld(canvas) {
       pos.z
     );
     camera.lookAt(ahead.x * 0.6, ahead.y - 8, ahead.z);
+    window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
     camera.rotation.z += Math.sin(t * 0.32) * 0.006;
     const fov = fovAt(pq);
     if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
