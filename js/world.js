@@ -87,7 +87,7 @@ export function createWorld(canvas) {
           float h = hills * 46.0 + detail * 7.0 + pow(peaks, 1.9) * 210.0 * peakMask;
           h *= mix(0.06, 1.0, corridor);
           // S4 quarry slice: around the relief station the worked land is flat basalt, no ranges
-          float quarry = 1.0 - smoothstep(0.55, 1.0, length((xz - vec2(60.0, -386.0)) / vec2(950.0, 720.0)));
+          float quarry = 1.0 - smoothstep(0.55, 1.0, length((xz - vec2(60.0, -386.0)) / vec2(2100.0, 1500.0)));
           h *= 1.0 - quarry * 0.96;
           h -= quarry * 1.5; // shallow worked depression
           h *= uBuild;
@@ -442,7 +442,11 @@ export function createWorld(canvas) {
     }
     monGeo.computeVertexNormals();
   }
-  const monument = new THREE.Mesh(monGeo, basalt);
+  const monument = new THREE.Mesh(monGeo, basalt.clone());
+  monument.material.transparent = true;
+  monument.material.depthWrite = false;
+  const monumentFades = [monument.material];
+  const monumentObjects = [monument];
   monument.position.set(monGp.x - 24, 10.5, monGp.z - 6);
   monument.rotation.y = 0.42;
   monument.rotation.z = 0.055;
@@ -458,7 +462,10 @@ export function createWorld(canvas) {
       fa.setZ(v, fa.getZ(v) + (frn() - 0.5) * 1.2);
     }
     fr.computeVertexNormals();
-    const fm = new THREE.Mesh(fr, basalt);
+    const fm = new THREE.Mesh(fr, basalt.clone());
+    fm.material.transparent = true;
+    fm.material.depthWrite = false;
+    monumentFades.push(fm.material); monumentObjects.push(fm);
     fm.position.set(monGp.x - 24 + ox, oy, monGp.z - 6 + oz);
     fm.rotation.y = frn() * 1.2;
     scene.add(fm);
@@ -491,7 +498,8 @@ export function createWorld(canvas) {
   const scrTex = new THREE.CanvasTexture(scrC);
   scrTex.colorSpace = THREE.SRGBColorSpace;
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(19, 12),
-    new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false }));
+    new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false, transparent: true }));
+  monumentFades.push(screen.material); monumentObjects.push(screen);
   screen.position.set(0, 3, 2.62);
   monument.add(screen);
   const monLight = new THREE.PointLight(0xE8862E, 350, 80, 2);
@@ -522,7 +530,7 @@ export function createWorld(canvas) {
     }
     rockGeo.computeVertexNormals();
   }
-  const rockMat = basalt.clone(); rockMat.fog = false; rockMat.color.set(0x181008);
+  const rockMat = basalt.clone(); rockMat.fog = false; rockMat.color.set(0x181008); rockMat.transparent = true; rockMat.opacity = 0; rockMat.depthWrite = false;
   const rock = new THREE.Mesh(rockGeo, rockMat);
   rock.position.set(rockGp.x - 2, 34, rockGp.z - 12);
   rock.rotation.y = 0.12;
@@ -573,7 +581,11 @@ export function createWorld(canvas) {
 
   /* ---------- authored silhouettes: spires that thicken into the canyon ---------- */
   const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true, transparent: true, opacity: 0 });
-  propsUpdaters.push((t, pr) => { spireMat.opacity = Math.min(1, Math.max(0, (pr - 0.05) / 0.06)); });
+  propsUpdaters.push((t, pr) => {
+    const base = Math.min(1, Math.max(0, (pr - 0.05) / 0.06));
+    const reliefClear = 1 - smooth(0.415, 0.455, pr) + smooth(0.61, 0.66, pr);
+    spireMat.opacity = base * Math.min(1, reliefClear);
+  });
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (let i = 0; i < 22; i++) {
@@ -592,7 +604,7 @@ export function createWorld(canvas) {
       posA.setZ(v, posA.getZ(v) * (0.82 + rnd() * 0.4));
     }
     geo.computeVertexNormals();
-    if (st > 0.52 && st < 0.64) continue; // quarry slice: no spire silhouettes near the relief
+    if (st > 0.30 && st < 0.72) continue; // quarry slice: no spire/cone silhouettes anywhere in the relief act
     const spire = new THREE.Mesh(geo, spireMat);
     spire.position.set(sp.x + side * dist, h * 0.32, sp.z + (rnd() - 0.5) * 60);
     spire.rotation.y = rnd() * Math.PI;
@@ -634,7 +646,12 @@ export function createWorld(canvas) {
     tUni.uFogDensity.value = scene.fog.density;
     pathUni.uFogDensity.value = scene.fog.density;
 
-    const gateIn = smooth(0.84, 0.97, prS);
+    const monFade = 1 - smooth(0.445, 0.475, prS); // S3 monument retires before the relief act
+    for (const mm of monumentFades) mm.opacity = monFade;
+    for (const mo of monumentObjects) mo.visible = monFade > 0.01;
+    const rockIn = smooth(0.66, 0.72, prS); // S5 projection rock exists only in its own act
+  rockMat.opacity = rockIn; rock.visible = rockIn > 0.01;
+  const gateIn = smooth(0.84, 0.97, prS);
     monoMat.opacity = 0.05 + 0.95 * smooth(0.70, 0.86, prS);
     doorMat.opacity = gateIn * 0.8;
     doorGlow.material.opacity = gateIn * 0.4;
@@ -666,7 +683,7 @@ export function createWorld(canvas) {
     const ly = (ahead.y - 8) + (reliefStation.pos.y + 1 - (ahead.y - 8)) * rEase;
     const lz = ahead.z + (reliefStation.pos.z - ahead.z) * rEase;
     camera.lookAt(lx, ly, lz);
-    window.__egScene = scene;
+    window.__egScene = scene; window.__egTHREE = THREE; window.__egCam = camera;
     window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), relief: reliefStation.pos.toArray().map(v=>+v.toFixed(1)), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
     camera.rotation.z += Math.sin(t * 0.32) * 0.006;
     const fov = fovAt(pq);

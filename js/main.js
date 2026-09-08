@@ -243,6 +243,10 @@ function loop(t) {
   if (plate) plate.classList.toggle('is-on', pr > 0.485 && pr < 0.545);
   const worksTitle = document.querySelector('.works-title');
   if (worksTitle) worksTitle.style.opacity = (pr > 0.478 && pr < 0.552) ? '0' : '';
+  const worksInner = document.querySelector('.works-inner');
+  if (worksInner) { worksInner.style.transition = 'opacity .4s'; worksInner.style.opacity = pr > 0.452 ? '0' : ''; } // works DOM fully exits before the relief act
+  const proofGrid = document.querySelector('.proof-grid');
+  if (proofGrid) { proofGrid.style.transition = 'opacity .4s'; proofGrid.style.opacity = pr > 0.452 ? '0' : ''; } // S3 proof cells retire with it
   const cfKiln = pr * (CHAPTER_COUNT - 1);
   if (shimmerMap && !prefersReduced) {
     shimmerV = Math.min(18, Math.abs(scrollCurrent - lastScroll) * 0.42);

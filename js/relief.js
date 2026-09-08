@@ -11,9 +11,9 @@ const RELIEF_VERT = /* glsl */`
   void main() {
     vUv = uv;
     float d = texture2D(uDepth, uv).r;
-    float read = smoothstep(0.55, 0.85, uArc);
+    float settle = smoothstep(0.88, 1.0, uArc);
     vec3 p = position;
-    p.z -= (d - 0.40) * 3.2 * (1.0 - read); // carved deep; flattens to the true page at read
+    p.z -= (d - 0.40) * 3.2 * (1.0 - settle); // carved deep; depth survives cooling, flattens only at the final settle
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
@@ -23,10 +23,20 @@ const RELIEF_FRAG = /* glsl */`
   uniform float uArc, uTime;
   uniform vec2 uTexel;
   varying vec2 vUv;
+  float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5453);
+    float b = fract(sin(dot(i + vec2(1.0, 0.0), vec2(127.1, 311.7))) * 43758.5453);
+    float c = fract(sin(dot(i + vec2(0.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+    float e = fract(sin(dot(i + vec2(1.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+    return mix(mix(a, b, f.x), mix(c, e, f.x), f.y);
+  }
   vec2 hash2(vec2 p){ p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))); return fract(sin(p)*43758.5453); }
   void main() {
     float d = texture2D(uDepth, vUv).r;
     float read = smoothstep(0.55, 0.85, uArc);
+    float settle = smoothstep(0.88, 1.0, uArc);
     float ignite = smoothstep(0.02, 0.22, uArc);
     float veinsPh = smoothstep(0.20, 0.35, uArc) * (1.0 - smoothstep(0.55, 0.80, uArc));
     vec3 raw = texture2D(uMap, vUv).rgb;
@@ -40,21 +50,25 @@ const RELIEF_FRAG = /* glsl */`
     vec3 graded = mix(raw, vec3(lum), 0.55) * vec3(0.95, 0.72, 0.5) * 0.5;
     graded *= 0.30 + 1.05 * rake;
     graded *= 0.62 + 0.38 * smoothstep(0.30, 0.62, d); // channel AO: the carving sits dark
-    vec3 col = mix(graded, raw, read);
-    // molten veins racing the carved channels
-    vec2 uv = vUv * 7.0; float t = uTime * 0.25;
-    vec2 i = floor(uv), f = fract(uv);
-    float f1 = 8.0, f2 = 8.0;
-    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-      vec2 g = vec2(float(x), float(y));
-      vec2 o = hash2(i + g); o = 0.5 + 0.5 * sin(t + 6.2831 * o);
-      float dd = length(g + o - f);
-      if (dd < f1) { f2 = f1; f1 = dd; } else if (dd < f2) { f2 = dd; }
-    }
-    float web = 1.0 - smoothstep(0.0, 0.13, f2 - f1);
-    float channels = smoothstep(0.44, 0.78, d); // veins live in the carving
-    float flick = 0.8 + 0.2 * sin(uTime * 11.0) * sin(uTime * 6.7);
-    col += vec3(1.0, 0.55, 0.18) * web * channels * veinsPh * flick * 3.4 * (1.0 - read);
+    vec3 page = raw * (0.70 + 0.30 * rake); // page colors arrive still shaped by the carving
+    vec3 col = mix(graded, page, read);
+    col = mix(col, raw, settle); // only the final settle is the true flat page
+    // heat-driven fracture: ember impact point, heat front sweeps outward,
+    // glow runs along the carved walls and along wandering radial cracks
+    float channels = smoothstep(0.44, 0.78, d); // heat lives in the carving
+    float edge = clamp(length(vec2(dx, dy)) * 26.0, 0.0, 1.0); // the cut walls themselves
+    vec2 imp = vec2(0.38, 0.58); // ember impact, inside the deep rolls region
+    vec2 dir = vUv - imp; dir.x *= 1.6; // aspect-true radius
+    float rad = length(dir);
+    float ang = atan(dir.y, dir.x);
+    float wander = vnoise(vec2(ang * 1.8 + 3.0, rad * 9.0 - uTime * 0.35));
+    float crack = abs(fract(ang * 2.149 + wander * 1.15 + 0.5) - 0.5) * rad; // bent spokes, wide apart
+    crack = 1.0 - smoothstep(0.0, 0.016 + rad * 0.012, crack);
+    float front = smoothstep(0.10, 0.60, uArc) * 1.35; // heat front position
+    float lit = smoothstep(front, front - 0.22, rad);  // glow where the front has passed
+    float flick = 0.82 + 0.18 * sin(uTime * 11.0) * sin(uTime * 6.7);
+    float heat = (edge * 0.85 + crack * 1.5) * channels * veinsPh * lit * flick;
+    col += vec3(1.0, 0.55, 0.18) * heat * 3.2 * (1.0 - read);
     col += vec3(1.0, 0.62, 0.25) * ignite * (1.0 - read) * 0.10 * channels;
     gl_FragColor = vec4(col, 1.0);
   }
@@ -110,26 +124,29 @@ export function makeRelief({ map, depthSpec }) {
   face.position.z = 3.0;
   group.add(face);
   // basalt slab body
-  const slabGeo = new THREE.BoxGeometry(35, 24, 4.0, 9, 8, 2);
+  const slabGeo = new THREE.BoxGeometry(39, 27, 7.5, 11, 9, 3);
   const sa = slabGeo.attributes.position; let ss = 977;
   const srn = () => { ss = (ss * 16807) % 2147483647; return ss / 2147483647; };
   for (let v = 0; v < sa.count; v++) {
     let x = sa.getX(v), y = sa.getY(v), z = sa.getZ(v);
-    const ex = Math.abs(x) / 17.5, ey = Math.abs(y) / 12.0; // 1 at the silhouette edges
+    const ex = Math.abs(x) / 19.5, ey = Math.abs(y) / 13.5; // 1 at the silhouette edges
     const edge = Math.max(ex, ey);
     // chip: noise grows toward edges and corners; corners get real bites
     const bite = Math.max(0, edge - 0.62);
-    x += (srn() - 0.5) * (Math.abs(x) > 15.5 ? 1.6 + bite * 3.6 : 0.5 + bite * 3.2); // side walls eroded
-    y += (srn() - 0.5) * (0.4 + bite * 2.6);
+    // asymmetric weathering: the upper-right took the hit, lower edge slumped
+    const asym = (x > 0 && y > 0 ? 1.9 : (y < 0 ? 1.25 : 0.85));
+    x += (srn() - 0.5) * (Math.abs(x) > 17.0 ? 2.1 + bite * 4.4 : 0.5 + bite * 3.2) * asym; // side walls eroded
+    y += (srn() - 0.5) * (0.5 + bite * 3.4) * asym;
     if (z < 1.0) z += (srn() - 0.5) * (0.5 + bite * 2.2); // back + sides eroded
-    if (edge > 0.97 && z > 1.0) { x -= Math.sign(x) * srn() * 1.6; y -= Math.sign(y) * srn() * 1.1; } // corner bites
+    if (edge > 0.97 && z > 1.0) { x -= Math.sign(x) * srn() * 2.4 * asym; y -= Math.sign(y) * srn() * 1.7 * asym; } // corner bites
+    if (x > 16.0 && y > -5 && y < 3 && z > 1.0) x -= srn() * 2.2; // long gouge out of the right flank
     sa.setX(v, x); sa.setY(v, y); sa.setZ(v, z);
   }
   slabGeo.computeVertexNormals();
   const slab = new THREE.Mesh(slabGeo, new THREE.MeshStandardMaterial({
-    color: 0x2e241a, roughness: 0.9, metalness: 0.04, emissive: 0x1a110a, emissiveIntensity: 0.9,
+    color: 0x4a3526, roughness: 0.88, metalness: 0.06, emissive: 0x2a160c, emissiveIntensity: 1.15,
   }));
-  slab.position.z = -0.8; // front face at 1.2, clear of the deepest carving (face min z ~1.56)
+  slab.position.z = -2.55; // front face at 1.2, thicker sculptural body; carved face stays clear
   group.add(slab);
   group.userData.update = (t, arc) => { mat.uniforms.uTime.value = t; mat.uniforms.uArc.value = arc; };
   return group;
