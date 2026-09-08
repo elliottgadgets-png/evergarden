@@ -149,6 +149,28 @@ function railUpdate() {
   });
 }
 
+/* ---------- S5 cinema: lateral dolly scrubbed by the chapter window ---------- */
+const cinemaTrack = document.querySelector('.cinema-track');
+const cFrames = cinemaTrack ? [...cinemaTrack.querySelectorAll('.cframe')] : [];
+const cProg = document.querySelector('.cinema-progress i');
+const CF_N = cFrames.length;
+function cinemaDrive(cf) {
+  if (!cinemaTrack) return;
+  if (cf < 2.9 || cf > 5.1) return;
+  const p = Math.min(1, Math.max(0, (cf - 3.35) / 1.2));
+  cinemaTrack.style.transform = `translate3d(${p * (CF_N - 1) * innerWidth}px, 0, 0)`;
+  if (cProg) cProg.style.transform = `scaleX(${p})`;
+  const pN = p * (CF_N - 1);
+  for (let i = 0; i < CF_N; i++) {
+    const d = Math.abs(pN - i);
+    const o = Math.min(1, Math.max(0, 1 - Math.max(0, d - 0.18) * 2.2));
+    const b = Math.min(10, Math.max(0, d - 0.18) * 18);
+    const el = cFrames[i];
+    el.style.opacity = o.toFixed(3);
+    el.style.filter = b > 0.1 ? `blur(${b.toFixed(1)}px)` : 'none';
+  }
+}
+
 /* ---------- S4 glass shimmer: scroll velocity bends the case glass ---------- */
 const shimmerMap = document.querySelector('#glass-shimmer feDisplacementMap');
 let shimmerV = 0, shimmerCur = 0, lastScroll = 0;
@@ -183,6 +205,7 @@ function loop(t) {
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);
   railUpdate();
+  cinemaDrive(pr * (CHAPTER_COUNT - 1));
   if (cross && document.body.dataset.chapter === '2') {
     const tx = cross._tx ?? innerWidth / 2, ty = cross._ty ?? innerHeight / 2;
     chPos.x += (tx - chPos.x) * 0.12;
