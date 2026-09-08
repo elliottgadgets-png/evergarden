@@ -58,6 +58,14 @@ if (virtual) {
   });
 }
 
+/* ---------- replay ---------- */
+const replay = document.getElementById('replay');
+if (replay) replay.addEventListener('click', e => {
+  e.preventDefault();
+  if (virtual) scrollTarget = 0;
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 /* ---------- cursor ---------- */
 const dot = document.getElementById('cursor-dot');
 const ring = document.getElementById('cursor-ring');

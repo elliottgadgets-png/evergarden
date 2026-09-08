@@ -9,6 +9,9 @@ const CHAPTERS = [
   { word: 'מגע',   pointer: 3.2, glow: 1.1, lift: 0.0,  spread: 0 },
   { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0 },
   { word: null,    pointer: 1.2, glow: 0.75, lift: -1.1, spread: 1 }, // embers
+  // bloom: the embers remember what they were — the swarm resurrects
+  // into the wordmark, smaller and higher, burning brighter.
+  { word: 'נצח',   pointer: 1.2, glow: 1.4, lift: 0.0,  spread: 0, scale: 0.4, cyOff: -0.23 },
 ];
 
 const COUNT = (typeof innerWidth !== 'undefined' && innerWidth < 720) ? 3200 : 6000;
@@ -77,10 +80,12 @@ export function createWordSystem(canvas) {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     const boxW = Math.min(W * 0.74, 1050);
     const boxH = H * 0.44;
-    chapters = CHAPTERS.map(ch => ({
-      ...ch,
-      pts: ch.word ? sampleWord(ch.word, boxW, boxH) : scatterPoints(W, H)
-    }));
+    chapters = CHAPTERS.map(ch => {
+      const pts = ch.word ? sampleWord(ch.word, boxW, boxH) : scatterPoints(W, H);
+      const sc = ch.scale || 1;
+      if (sc !== 1) for (let i = 0; i < pts.length; i++) pts[i] *= sc;
+      return { ...ch, pts };
+    });
   }
 
   const ready = document.fonts.ready.then(() => buildAll());
@@ -154,7 +159,9 @@ export function createWordSystem(canvas) {
     const glow = A.glow + (B.glow - A.glow) * f;
     const lift = A.lift + (B.lift - A.lift) * f;
 
-    const cx = W / 2, cy = H * 0.40;
+    const cx = W / 2;
+    const cyOff = (A.cyOff || 0) + ((B.cyOff || 0) - (A.cyOff || 0)) * f;
+    const cy = H * (0.40 + cyOff);
     const R = 150 * Math.min(1.6, Math.max(0.7, pStr));
     const R2 = R * R;
     const k = 0.021, damp = 0.85;

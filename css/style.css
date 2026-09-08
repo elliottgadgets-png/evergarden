@@ -74,7 +74,8 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
   position: relative; padding: 0 6vw 14vh;
   pointer-events: none;
 }
-.panel-outro { justify-content: center; padding-bottom: 0; }
+.panel-outro { justify-content: flex-end; padding-bottom: 0; }
+.panel-outro .outro-inner { padding-bottom: 11vh; }
 
 .cap {
   font-weight: 200; font-size: clamp(13px, 1.3vw, 17px);
