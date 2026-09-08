@@ -8,6 +8,8 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function createParticleFX() {
   const heroEl = document.getElementById('hero-fx');
+  const zoneEl = document.getElementById('zone-fx');
+  let kiln = null, kilnBooting = false;
   const outroEl = document.querySelector('.outro-fx');
   let mod = null, hero = null, outro = null, outroBooting = false;
 
@@ -67,5 +69,24 @@ export function createParticleFX() {
     }
   }
 
-  return { bootSpark, handoffToHero, sparkFrame, frame };
+  // v5.0 kiln zone: environmental sparks rising off the kiln, heat follows pointer.
+  async function bootKiln() {
+    if (REDUCED || !zoneEl || kiln || kilnBooting) return;
+    kilnBooting = true;
+    try {
+      const m = await loadMod();
+      kiln = m.init(zoneEl, { motion: 'rise', quality: 'auto' });
+    } catch (e) { kiln = null; }
+  }
+  function kilnFrame(tSec, cf, nx, ny) {
+    const inZone = cf > 4.55 && cf < 6.6;
+    if (inZone && !kiln) bootKiln();
+    if (!kiln || !zoneEl) return;
+    zoneEl.style.opacity = inZone ? String(Math.min(1, (cf - 4.55) / 0.3) * Math.min(1, Math.max(0, (6.6 - cf) / 0.5))) : '0';
+    if (!inZone) return;
+    kiln.setHeat(nx, ny);
+    kiln.frame(tSec, Math.min(1, Math.max(0, (cf - 4.55) / 1.45)));
+  }
+
+  return { bootSpark, handoffToHero, sparkFrame, frame, kilnFrame };
 }

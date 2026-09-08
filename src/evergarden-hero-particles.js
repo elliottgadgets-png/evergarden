@@ -38,7 +38,8 @@ const VERT = /* glsl */`
   attribute vec3 aTint;     // per-target tint (composite layout)
   attribute float aTintW;   // tint weight 0/1
   attribute float aSize;    // per-particle size factor
-  uniform float uTime, uMorph, uMorph2, uPixelRatio, uAspect, uHold, uBreathe, uSpark, uVortexMix;
+  uniform float uTime, uMorph, uMorph2, uPixelRatio, uAspect, uHold, uBreathe, uSpark, uVortexMix, uRise;
+  uniform vec2 uHeat;
   varying float vSpark;     // 0..1 ember-ness
   varying float vFade;
   varying vec3 vTint;
@@ -52,6 +53,7 @@ const VERT = /* glsl */`
 
     /* --- base motion --- */
     vec3 field;
+    float heatK = 0.0;
     // S0 flint strike: all material collapses to one ember point, bursts into a spiral
     float b = uSpark;
     float bDist = b * (0.22 + 1.3*s.x);
@@ -77,7 +79,18 @@ const VERT = /* glsl */`
       (s.x-0.5)*2.4*uAspect + sin(uTime*0.10 + s.y*23.0)*0.08,
       (s.y-0.5)*1.5 + sin(uTime*0.07 + s.x*19.0)*0.06 - uTime*0.006*(0.3+s.z),
       (s.z-0.5)*0.8);
-    vec3 rest = mix(vortex, drift, uBreathe);
+    // S6 kiln: heat and sparks rise off the fired piece; near the heat source they run faster+hotter
+    float riseSpd = 0.12 + 0.25*s.y;
+    float ry = mod(s.y*2.2 + uTime*riseSpd, 2.4) - 1.2;      // wrap upward
+    vec3 rise = vec3(
+      (s.x-0.5)*2.6*uAspect + sin(uTime*(0.5+s.z) + s.x*30.0)*0.06*(1.0+ry),
+      ry,
+      (s.z-0.5)*0.9 + cos(uTime*0.4 + s.y*20.0)*0.04);
+    // heat-source pull: particles near uHeat rise faster
+    float heatD = distance(rise.xy / vec2(uAspect, 1.0), uHeat);
+    heatK = smoothstep(0.6, 0.0, heatD);
+    rise.y += heatK * 0.25 * sin(uTime*2.0 + s.x*50.0);
+    vec3 rest = mix(mix(vortex, drift, uBreathe), rise, uRise);
     field = mix(sparkField, rest, uVortexMix);
     }
 
@@ -110,7 +123,9 @@ const VERT = /* glsl */`
     float emberNess = step(0.86, s.y);
     float tw = 0.55 + 0.45*sin(uTime*(2.0+4.0*s.x) + s.z*40.0);
     float holdGlow = uHold * (0.35 + 0.65*tw);
-    vSpark = clamp(emberNess * tw * mix(1.0, uHold*0.9 + 0.25, stag) + holdGlow*step(0.55, s.x) + flash, 0.0, 1.0);
+    // kiln heat: particles near the source and near the "piece" (lower center) run hot
+    float kiln = uRise * (heatK*0.9 + smoothstep(0.4, -0.9, pos.y)*0.35);
+    vSpark = clamp(emberNess * max(tw, uRise*0.55) * mix(1.0, uHold*0.9 + 0.25, stag) + holdGlow*step(0.55, s.x) + flash + kiln*step(0.35, s.z), 0.0, 1.0);
     vFade  = 1.0 - smoothstep(6.0, 9.0, dist);
   }
 `;
@@ -217,6 +232,8 @@ export function init(container, opts = {}) {
     uHold: { value: 0 },
     uBreathe: { value: opts.motion === 'breathe' ? 1 : 0 },
     uSpark: { value: initState ? initState.spark || 0 : 0 },
+    uRise: { value: 0 },
+    uHeat: { value: new THREE.Vector2(0.0, -0.4) },
     uVortexMix: { value: initState ? initState.vortexMix : (opts.motion === 'spark' ? 0 : 1) },
     uPixelRatio: { value: 1 },
     uAspect: { value: 1 },
@@ -301,8 +318,9 @@ export function init(container, opts = {}) {
   function smooth(a, b, x) { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); }
 
   let sparkMode = opts.motion === 'spark';
+  let riseMode = opts.motion === 'rise';
   let mixAnim = null;
-  const MOTION_MIX = { spark: 0, vortex: 1, breathe: 1 };
+  const MOTION_MIX = { spark: 0, vortex: 1, breathe: 1, rise: 1 };
 
   return {
     get targetReady() { return targetReady; },
@@ -310,9 +328,13 @@ export function init(container, opts = {}) {
     setMotionMode(mode, blendSecs = 1.2) {
       if (!(mode in MOTION_MIX)) return;
       sparkMode = mode === 'spark';
-      uniforms.uBreathe.value = mode === 'breathe' ? 1 : (mode === 'spark' ? uniforms.uBreathe.value : 0);
+      riseMode = mode === 'rise';
+      if (mode === 'rise') uniforms.uRise.value = Math.max(uniforms.uRise.value, 0.6);
+      uniforms.uBreathe.value = mode === 'breathe' ? 1 : (mode === 'spark' || mode === 'rise' ? uniforms.uBreathe.value : 0);
       mixAnim = { from: uniforms.uVortexMix.value, to: MOTION_MIX[mode], t0: uniforms.uTime.value, dur: Math.max(blendSecs, 0.01) };
     },
+    // S6: move the heat source (normalized: x -1..1, y -1..1 in view space)
+    setHeat(nx, ny) { uniforms.uHeat.value.set(nx, ny); },
     // uniform state for cut-free handoff when the AD wires S0 and S1 as separate instances
     getState() {
       return {
@@ -333,6 +355,10 @@ export function init(container, opts = {}) {
       }
       if (sparkMode) {
         uniforms.uSpark.value = smooth(0.02, 0.75, p);
+      } else if (riseMode) {
+        // S6: p ramps the kiln from banked glow to full rising heat
+        uniforms.uRise.value = smooth(0.05, 0.45, p);
+        uniforms.uHold.value = 0;
       } else if (uniforms.uBreathe.value > 0.5) {
         // S7: gather 0.10..0.60 (sequence: phase2 0.55..0.95), then calm hold
         uniforms.uMorph.value = targetReady ? smooth(0.10, 0.60, p) : 0;

@@ -213,6 +213,7 @@ function loop(t) {
     ring.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
   }
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
+  const cfKiln = pr * (CHAPTER_COUNT - 1);
   if (shimmerMap && !prefersReduced) {
     shimmerV = Math.min(18, Math.abs(scrollCurrent - lastScroll) * 0.42);
     lastScroll = scrollCurrent;
@@ -222,6 +223,7 @@ function loop(t) {
     if (shimmerMap._last !== sv) { shimmerMap.setAttribute('scale', sv); shimmerMap._last = sv; }
   }
   world.frame(t, pr);
+  pfx.kilnFrame(t * 0.001, cfKiln, (cur.tx / innerWidth) * 2 - 1, (cur.ty / innerHeight) * 2 - 1);
   chapterUpdate(pr);
   sound.progress(pr);
   railUpdate();
