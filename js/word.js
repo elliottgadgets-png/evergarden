@@ -92,6 +92,12 @@ export function createWordSystem(canvas) {
   });
 
   const pointer = { x: -9999, y: -9999 };
+  const bursts = []; // {x, y, t0}
+
+  window.addEventListener('pointerdown', e => {
+    bursts.push({ x: e.clientX, y: e.clientY, t0: performance.now() });
+    if (bursts.length > 4) bursts.shift();
+  });
   window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; });
   window.addEventListener('pointerleave', () => { pointer.x = -9999; pointer.y = -9999; });
 
@@ -151,6 +157,21 @@ export function createWordSystem(canvas) {
           vy[i] += (dy / d) * force + (dx / d) * force * 0.45;
         }
       }
+      // click bursts: shockwave that scatters the letters
+      for (let b = 0; b < bursts.length; b++) {
+        const age = (t - bursts[b].t0) / 1000;
+        if (age > 1.1) { bursts.splice(b--, 1); continue; }
+        const wave = 1 - age / 1.1;
+        const bdx = px[i] - bursts[b].x, bdy = py[i] - bursts[b].y;
+        const bd2 = bdx * bdx + bdy * bdy;
+        if (bd2 < 320 * 320 && bd2 > 0.01) {
+          const bd = Math.sqrt(bd2);
+          const bf = (1 - bd / 320) * 9 * wave * wave;
+          vx[i] += (bdx / bd) * bf;
+          vy[i] += (bdy / bd) * bf;
+        }
+      }
+
       vy[i] += lift * 0.03 * (0.5 + stag[i]);
 
       vx[i] *= damp; vy[i] *= damp;
