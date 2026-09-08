@@ -24,6 +24,7 @@ const CHAPTERS = [
 ];
 
 const COUNT = (typeof innerWidth !== 'undefined' && innerWidth < 720) ? 3200 : 6000;
+export const CHAPTER_COUNT = CHAPTERS.length;
 
 function sampleWord(word, boxW, boxH) {
   const fs = 240;

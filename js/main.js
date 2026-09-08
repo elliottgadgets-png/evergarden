@@ -1,5 +1,6 @@
 // main.js — boot, virtual scroll, cursor, grain, choreography.
-import { createWordSystem } from './word.js';
+import { createWordSystem, CHAPTER_COUNT } from './word.js';
+import { createSectionRouter } from './sections.js';
 import { createSound } from './sound.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -28,6 +29,7 @@ const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- word system ---------- */
 const sound = createSound();
+const sections = createSectionRouter();
 const wordSys = createWordSystem(document.getElementById('word'), {
   onChapter: i => sound.chapter(i),
   onBurst: () => sound.burst()
@@ -126,6 +128,7 @@ function loop(t) {
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
   wordSys.frame(t, pr);
   sound.progress(pr);
+  sections.frame(t, pr, CHAPTER_COUNT);
   requestAnimationFrame(loop);
 }
 
