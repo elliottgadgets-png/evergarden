@@ -97,7 +97,7 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
   transition: transform .45s cubic-bezier(.22,1,.36,1), border-color .45s, box-shadow .45s;
 }
 .work-card:hover { transform: translateY(-8px); border-color: var(--ember); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
-.work-card img { width: 100%; aspect-ratio: 8/5; object-fit: cover; object-position: top; display: block; }
+.work-card img { width: 100%; aspect-ratio: 8/5; object-fit: cover; object-position: top; display: block; filter: url(#glass-shimmer); }
 .work-meta { padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 6px; text-align: right; }
 .work-name { font-family: "Frank Ruhl Libre", serif; font-weight: 900; font-size: 21px; }
 .work-type { font-weight: 200; font-size: 11px; letter-spacing: .25em; color: var(--dim); }
@@ -190,9 +190,9 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
 .proof-key { font-weight: 200; font-size: 11px; letter-spacing: .2em; opacity: .7; }
 
 /* S3 surveyor crosshair — follows the pointer, latin digits by design */
-.crosshair { position: fixed; top: 0; left: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity .5s; }
+.crosshair { position: fixed; top: 0; left: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity .5s; mix-blend-mode: difference; color: #fff; }
 body[data-chapter="2"] .crosshair { opacity: 1; }
-.ch-h, .ch-v { position: fixed; background: currentColor; opacity: .35; }
+.ch-h, .ch-v { position: fixed; background: currentColor; opacity: .55; }
 .ch-h { width: 300vw; height: 1px; top: 0; left: -150vw; }
 .ch-v { width: 1px; height: 300vh; top: -150vh; left: 0; }
 .ch-read {

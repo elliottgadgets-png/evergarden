@@ -119,6 +119,10 @@ if (cross && virtual) {
   window.addEventListener('pointermove', e => { cross._tx = e.clientX; cross._ty = e.clientY; });
 }
 
+/* ---------- S4 glass shimmer: scroll velocity bends the case glass ---------- */
+const shimmerMap = document.querySelector('#glass-shimmer feDisplacementMap');
+let shimmerV = 0, shimmerCur = 0, lastScroll = 0;
+
 /* ---------- main loop ---------- */
 function loop(t) {
   if (virtual) {
@@ -135,6 +139,14 @@ function loop(t) {
     ring.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
   }
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
+  if (shimmerMap && !prefersReduced) {
+    shimmerV = Math.min(18, Math.abs(scrollCurrent - lastScroll) * 0.42);
+    lastScroll = scrollCurrent;
+    shimmerCur += (shimmerV - shimmerCur) * 0.14;
+    if (shimmerCur < 0.15) shimmerCur = 0;
+    const sv = shimmerCur.toFixed(1);
+    if (shimmerMap._last !== sv) { shimmerMap.setAttribute('scale', sv); shimmerMap._last = sv; }
+  }
   aurora.frame(t);
   wordSys.frame(t, pr);
   sound.progress(pr);

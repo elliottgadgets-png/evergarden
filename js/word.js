@@ -156,6 +156,7 @@ export function createWordSystem(canvas, hooks = {}) {
   let seeded = false;
   let energy = 0;   // scroll-velocity energy: fast scrolls shake the letters
   let lastProg = 0, lastT = 0;
+  let lastChapter = -1;
   const smooth = t => t * t * (3 - 2 * t);
   let lastBgCss = '';
   const mood = { bg: [11, 11, 13], accent: [245, 194, 107] };
@@ -183,7 +184,8 @@ export function createWordSystem(canvas, hooks = {}) {
     const ci = Math.min(N - 2, Math.floor(cf));
     const f = cf - ci;
     const A = chapters[ci], B = chapters[ci + 1];
-    if (hooks.onChapter && f < 0.04) hooks.onChapter(ci);
+    const ciR = Math.min(N - 1, Math.round(cf));
+    if (hooks.onChapter && ciR !== lastChapter) { lastChapter = ciR; hooks.onChapter(ciR); }
 
     // interpolate chapter behavior
     const pStr = A.pointer + (B.pointer - A.pointer) * f;

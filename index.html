@@ -48,8 +48,7 @@
   <section class="panel panel-laptop" data-ch="2">
     <div class="laptop-stage" aria-hidden="true"></div>
     <p class="cap reveal-line">הפיקסל האחרון הוא ההבדל בין מוצר ליצירה.</p>
-      <div class="crosshair" aria-hidden="true"><div class="ch-h"></div><div class="ch-v"></div><div class="ch-read">X:0000 Y:0000</div></div>
-    <div class="proof-grid reveal-line">
+      <div class="proof-grid reveal-line">
       <div class="proof-cell"><span class="proof-val">מתחת לשנייה</span><span class="proof-key">זמן טעינה</span></div>
       <div class="proof-cell"><span class="proof-val">100</span><span class="proof-key">בליבת הנגישות</span></div>
       <div class="proof-cell"><span class="proof-val">מושלם</span><span class="proof-key">RTL עד הניקוד האחרון</span></div>
@@ -98,6 +97,13 @@
     </div>
   </section>
 </main>
+<div class="crosshair" aria-hidden="true"><div class="ch-h"></div><div class="ch-v"></div><div class="ch-read">X:0000 Y:0000</div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="glass-shimmer" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
 
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script type="module" src="js/main.js"></script>
