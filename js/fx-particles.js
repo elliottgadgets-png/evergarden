@@ -39,8 +39,8 @@ export function createParticleFX() {
       // portrait: shrink the composite and lift it above the copy
       const portrait = matchMedia('(max-width: 760px)').matches;
       outro = m.init(outroEl, { motion: 'breathe', quality: 'auto', targets: portrait ? [
-        { url: 'targets/s7-commission-book.png', x:  0.34, y: 0.58, scale: 0.34, tint: 0xF4F1EA },
-        { url: 'targets/s7-seal-ring.png',       x: -0.44, y: 0.66, scale: 0.26, tint: 0xE8862E },
+        { url: 'targets/s7-commission-book.png', x:  0.36, y: 0.86, scale: 0.27, tint: 0xF4F1EA },
+        { url: 'targets/s7-seal-ring.png',       x: -0.46, y: 0.88, scale: 0.21, tint: 0xE8862E },
       ] : [
         { url: 'targets/s7-commission-book.png', x:  0.38, y: -0.12, scale: 0.62, tint: 0xF4F1EA }, // book RIGHT, paper
         { url: 'targets/s7-seal-ring.png',       x: -0.56, y:  0.04, scale: 0.45, tint: 0xE8862E }, // seal LEFT, ember
