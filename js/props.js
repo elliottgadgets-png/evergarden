@@ -158,8 +158,8 @@ export function makeNiche(frameW = 1.6, frameH = 1.1) {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(frameW, frameH),
     new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.05, roughness: 0.1, metalness: 0.9 }));
   glass.position.z = 0.045; g.add(glass);
-  g.userData.setImage = (tex) => { tex.colorSpace = THREE.SRGBColorSpace; imgMat.map = tex; imgMat.color.set(0xffffff); imgMat.needsUpdate = true; };
-  g.userData.update = (t, phase = 0) => { imgMat.emissiveIntensity = 0.28 + phase * 0.32; };
+  g.userData.setImage = (tex) => { tex.colorSpace = THREE.SRGBColorSpace; imgMat.map = tex; imgMat.emissiveMap = tex; imgMat.emissive.set(0xffffff); imgMat.color.set(0xffffff); imgMat.needsUpdate = true; };
+  g.userData.update = (t, phase = 0) => { imgMat.emissiveIntensity = 0.18 + phase * 0.62; };
   return g;
 }
 
