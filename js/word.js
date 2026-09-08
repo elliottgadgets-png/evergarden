@@ -106,6 +106,20 @@ export function createWordSystem(canvas) {
   window.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; lastRealMove = performance.now(); });
   window.addEventListener('pointerleave', () => { pointer.x = -9999; pointer.y = -9999; });
 
+  // type-to-morph: the visitor types, the swarm spells it
+  let typed = '', typedAt = 0, typedPts = null, typedMix = 0;
+  window.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Backspace') { typed = typed.slice(0, -1); typedPts = null; typedAt = performance.now(); return; }
+    if (e.key.length !== 1) return;
+    if (!/[\u0590-\u05FFa-zA-Z0-9!?.]/.test(e.key)) return;
+    const now = performance.now();
+    if (now - typedAt > 1500) typed = '';
+    typed = (typed + e.key).slice(-9);
+    typedAt = now;
+    typedPts = null;
+  });
+
   let seeded = false;
   let energy = 0;   // scroll-velocity energy: fast scrolls shake the letters
   let lastProg = 0, lastT = 0;
@@ -163,9 +177,14 @@ export function createWordSystem(canvas) {
     for (let i = 0; i < COUNT; i++) {
       // staggered morph between chapters
       const fi = smooth(Math.min(1, Math.max(0, f * 1.7 - stag[i] * 0.7)));
-      const tx = cx + A.pts[i * 2] + (B.pts[i * 2] - A.pts[i * 2]) * fi;
-      const ty = cy + A.pts[i * 2 + 1] + (B.pts[i * 2 + 1] - A.pts[i * 2 + 1]) * fi
-               + Math.sin(tt * 1.3 + wob[i]) * 0.55;
+      let tx = A.pts[i * 2] + (B.pts[i * 2] - A.pts[i * 2]) * fi;
+      let ty = A.pts[i * 2 + 1] + (B.pts[i * 2 + 1] - A.pts[i * 2 + 1]) * fi;
+      if (typedMix > 0.01 && typedPts) {
+        tx += (typedPts[i * 2] - tx) * typedMix;
+        ty += (typedPts[i * 2 + 1] - ty) * typedMix;
+      }
+      tx += cx;
+      ty += cy + Math.sin(tt * 1.3 + wob[i]) * 0.55;
 
       vx[i] += (tx - px[i]) * k;
       vy[i] += (ty - py[i]) * k;
@@ -213,6 +232,12 @@ export function createWordSystem(canvas) {
       vx[i] *= damp; vy[i] *= damp;
       px[i] += vx[i]; py[i] += vy[i];
     }
+
+    // typed override: blend chapter targets with the visitor's own word
+    const wantTyped = typed && (t - typedAt < 6000);
+    typedMix += ((wantTyped ? 1 : 0) - typedMix) * 0.14;
+    if (wantTyped && !typedPts) typedPts = sampleWord(typed, Math.min(W * 0.74, 1050), H * 0.44);
+    if (!typed) typedMix = Math.max(0, typedMix - 0.02);
 
     // halo pass (sparse, cheap glow)
     ctx.fillStyle = `rgba(236,233,226,${0.05 * glow})`;
