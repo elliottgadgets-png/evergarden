@@ -238,6 +238,10 @@ function loop(t) {
     ring.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
   }
   const pr = maxScroll ? scrollCurrent / maxScroll : 0;
+  const plate = document.getElementById('plate-soshimi');
+  if (plate) plate.classList.toggle('is-on', pr > 0.485 && pr < 0.545);
+  const worksTitle = document.querySelector('.works-title');
+  if (worksTitle) worksTitle.style.opacity = (pr > 0.478 && pr < 0.552) ? '0' : '';
   const cfKiln = pr * (CHAPTER_COUNT - 1);
   if (shimmerMap && !prefersReduced) {
     shimmerV = Math.min(18, Math.abs(scrollCurrent - lastScroll) * 0.42);

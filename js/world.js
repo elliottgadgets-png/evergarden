@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { makeCrucible, makeNiche, makeBookSealStand } from './props.js';
+import { makeRelief, SOSHIMI_DEPTH } from './relief.js';
 
 const NOISE = /* glsl */`
 vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}
@@ -320,17 +321,20 @@ export function createWorld(canvas) {
   }
 
   // S4: three lit niches set into the canyon wall, each holding a finished piece
+  const reliefStation = { pos: new THREE.Vector3() };
   const nicheShots = ['assets/work-videoeditor.jpg', 'assets/work-verdant.jpg', 'assets/work-soshimi.jpg'];
   nicheShots.forEach((src, i) => {
-    const niche = makeNiche(1.6, 1.05);
+    const isRelief = i === 0; // S4 lead work: fired basalt relief (v3.1) - soshimi, facing the road
+    const niche = isRelief ? makeRelief({ map: texLoader.load('assets/work-soshimi.jpg'), depthSpec: SOSHIMI_DEPTH }) : makeNiche(1.6, 1.05);
     const nt = 0.58 + i * 0.09;
     const np = curve.getPointAt(nt);
     const side = i % 2 === 0 ? 1 : -1;
-    niche.scale.setScalar(13);
-    niche.position.set(np.x + side * 44, np.y + 13, np.z);
+    niche.scale.setScalar(isRelief ? 1.15 : 13);
+    niche.position.set(np.x + side * (isRelief ? 52 : 44), np.y + 13, np.z);
+    if (isRelief) { reliefStation.pos.copy(niche.position); niche.rotation.y = -side * 0.35; niche.userData.isReliefRoot = true; window.__egRelief = niche; }
     /* unrotated: plane fronts face +z, toward the approaching camera */
     scene.add(niche);
-    texLoader.load(src, (tex) => niche.userData.setImage(tex));
+    texLoader.load(src, (tex) => { if (niche.userData.setImage) niche.userData.setImage(tex); });
     const backGeo = new THREE.BoxGeometry(54, 32, 10, 6, 4, 2);
     {
       const ba = backGeo.attributes.position; let bs = 211 + i * 53;
@@ -344,7 +348,7 @@ export function createWorld(canvas) {
     }
     const back = new THREE.Mesh(backGeo, basalt2());
     back.position.copy(niche.position); back.position.y -= 3; back.position.z -= 9; back.rotation.y = side * 0.06;
-    scene.add(back);
+    if (!isRelief) scene.add(back);
     const caseLight = new THREE.PointLight(0xFFD28A, 500, 70, 2);
     caseLight.position.set(np.x + side * 20, np.y + 22, np.z + 24);
     scene.add(caseLight);
@@ -355,9 +359,14 @@ export function createWorld(canvas) {
       const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.075));
       const ease = ph * ph * (3 - 2 * ph);
       niche.userData.update(t, ph);
+      if (isRelief) {
+        const tt = Math.min(1, Math.max(0, (ph - 0.55) / 0.45));
+        const ts = tt * tt * (3 - 2 * tt);
+        niche.rotation.y = -side * (0.35 + ts * (Math.PI / 2 - 0.35));
+      }
       niche.children.forEach((ch, ci) => {
         if (!ch.material) return;
-        const isBar = ci < 4; // frame bars hidden: the lit opening is the alcove
+        const isBar = !isRelief && ci < 4; // frame bars hidden: the lit opening is the alcove
         ch.material.opacity = (isBar ? 0.0 : 1.0) * ease;
       });
       backMats.opacity = ease * 0.92;
@@ -636,8 +645,15 @@ export function createWorld(canvas) {
       pos.y + 6 + (scrollMoving ? 0 : Math.sin(t * 0.71 + 1.7) * 0.55),
       pos.z
     );
-    camera.lookAt(ahead.x * 0.6, ahead.y - 8, ahead.z);
-    window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
+    // fired-relief dwell: gaze eases from the road to the monolith and back
+    const rPh = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.58) / 0.075));
+    const rEase = rPh * rPh * (3 - 2 * rPh);
+    const lx = ahead.x * 0.6 + (reliefStation.pos.x - ahead.x * 0.6) * rEase;
+    const ly = (ahead.y - 8) + (reliefStation.pos.y + 1 - (ahead.y - 8)) * rEase;
+    const lz = ahead.z + (reliefStation.pos.z - ahead.z) * rEase;
+    camera.lookAt(lx, ly, lz);
+    window.__egScene = scene;
+    window.__egDbg = () => ({ pq, cam: camera.position.toArray().map(v=>+v.toFixed(1)), ahead: ahead.toArray().map(v=>+v.toFixed(1)), relief: reliefStation.pos.toArray().map(v=>+v.toFixed(1)), rock: rock.position.toArray().map(v=>+v.toFixed(1)), projO: +projMat.opacity.toFixed(2), projI: Math.round(projLight.intensity), fov: +camera.fov.toFixed(1) });
     camera.rotation.z += Math.sin(t * 0.32) * 0.006;
     const fov = fovAt(pq);
     if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
