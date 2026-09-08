@@ -159,7 +159,7 @@ const cClose = document.querySelector('.cframe-close');
 function cinemaDrive(cf) {
   if (!cinemaTrack) return;
   if (cf < 2.9 || cf > 5.1) return;
-  const p = Math.min(1, Math.max(0, (cf - 3.35) / 1.2));
+  const p = Math.min(1, Math.max(0, (cf - 3.5) / 1.0));
   cinemaTrack.style.transform = `translate3d(${p * (CF_N - 1) * innerWidth}px, 0, 0)`;
   if (cProg) cProg.style.transform = `scaleX(${p})`;
   // S5→S6 burn-through: the closing frame ignites and the kiln light blooms through
