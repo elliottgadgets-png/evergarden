@@ -1,0 +1,7 @@
+{
+  "name": "s7-commission-book",
+  "description": "S7 open commission book with text lines",
+  "size": 512,
+  "count": 3420,
+  "encoding": "rgb = (pos/1.0 + 1)/2 * 255, alpha 255 = occupied"
+}

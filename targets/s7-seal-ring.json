@@ -1,0 +1,7 @@
+{
+  "name": "s7-seal-ring",
+  "description": "S7 seal ring (band + glyph)",
+  "size": 512,
+  "count": 3241,
+  "encoding": "rgb = (pos/1.0 + 1)/2 * 255, alpha 255 = occupied"
+}

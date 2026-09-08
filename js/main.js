@@ -4,6 +4,7 @@ import { createSectionRouter } from './sections.js';
 import { createAurora } from './aurora.js';
 import { createSound } from './sound.js';
 import { createRevealer } from './motion.js';
+import { createParticleFX } from './fx-particles.js';
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -37,6 +38,7 @@ const wordSys = createWordSystem(document.getElementById('word'), {
   onBurst: () => sound.burst()
 });
 const aurora = createAurora(document.getElementById('gl'), wordSys.mood);
+const pfx = createParticleFX();
 window.__egSound = sound;
 const soundBtn = document.getElementById('sound-toggle');
 if (soundBtn) soundBtn.addEventListener('click', () => {
@@ -109,7 +111,20 @@ if (isTouch) {
 }
 
 /* ---------- reveals (one motion language) ---------- */
-createRevealer();
+// createRevealer() runs in openSite() so entrance choreography plays after the strike.
+
+/* ---------- S0 flint strike: letter-by-letter + spark ---------- */
+const loadLabel = document.getElementById('load-label');
+if (loadLabel) {
+  const txt = loadLabel.textContent;
+  loadLabel.textContent = '';
+  [...txt].forEach(ch => {
+    const sp = document.createElement('span');
+    sp.className = 'l' + (ch === ' ' ? ' sp' : '');
+    sp.textContent = ch === ' ' ? '\u00A0' : ch;
+    loadLabel.appendChild(sp);
+  });
+}
 
 /* ---------- workbench crosshair (chapter 2) ---------- */
 const cross = document.querySelector('.crosshair');
@@ -149,6 +164,7 @@ function loop(t) {
   }
   aurora.frame(t);
   wordSys.frame(t, pr);
+  pfx.frame(t * 0.001, pr * (CHAPTER_COUNT - 1));
   sound.progress(pr);
   sections.frame(t, pr, CHAPTER_COUNT);
   if (cross && document.body.dataset.chapter === '2') {
@@ -175,14 +191,30 @@ const count = document.getElementById('load-count');
 let p = 0;
 let fontsReady = false;
 wordSys.ready.then(() => { fontsReady = true; });
+let spark = null;
+pfx.bootSpark().then(h => { spark = h; });
+// spark runs on its own clock until the main loop takes over
+let sparkAlive = true;
+(function sparkLoop(t) {
+  if (!sparkAlive) return;
+  if (spark) pfx.sparkFrame(t * 0.001, Math.min(1, p / 100));
+  requestAnimationFrame(sparkLoop);
+})(0);
+const labelLetters = loadLabel ? [...loadLabel.children] : [];
 const tick = setInterval(() => {
   const cap = fontsReady ? 100 : 88;
   p = Math.min(cap, p + 2 + Math.random() * 6);
   count.textContent = Math.floor(p);
+  const lit = Math.floor((p / 100) * labelLetters.length * 1.15);
+  labelLetters.forEach((el, i) => el.classList.toggle('lit', i < lit));
   if (p >= 100) { clearInterval(tick); setTimeout(openSite, 300); }
 }, 70);
 
 function openSite() {
+  document.body.classList.add('is-open');
+  createRevealer();
+  pfx.handoffToHero();
+  sparkAlive = false;
   pre.style.transition = 'opacity 1s ease';
   pre.style.opacity = '0';
   setTimeout(() => pre.remove(), 1100);

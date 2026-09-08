@@ -1,0 +1,7 @@
+{
+  "name": "s1-armature",
+  "description": "S1 abstract gabled armature/frame wireframe",
+  "size": 512,
+  "count": 5328,
+  "encoding": "rgb = (pos/1.0 + 1)/2 * 255, alpha 255 = occupied"
+}
