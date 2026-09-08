@@ -79,10 +79,10 @@ export function createParticleFX() {
     } catch (e) { kiln = null; }
   }
   function kilnFrame(tSec, cf, nx, ny) {
-    const inZone = cf > 4.55 && cf < 6.6;
+    const inZone = cf > 4.55 && cf < 6.05;
     if (inZone && !kiln) bootKiln();
     if (!kiln || !zoneEl) return;
-    zoneEl.style.opacity = inZone ? String(Math.min(1, (cf - 4.55) / 0.3) * Math.min(1, Math.max(0, (6.6 - cf) / 0.5))) : '0';
+    zoneEl.style.opacity = inZone ? String((Math.min(1, (cf - 4.55) / 0.3) * Math.min(1, Math.max(0, (6.05 - cf) / 0.45))).toFixed(3)) : '0';
     if (!inZone) return;
     kiln.setHeat(nx, ny);
     kiln.frame(tSec, Math.min(1, Math.max(0, (cf - 4.55) / 1.45)));

@@ -36,8 +36,9 @@ const sound = createSound();
 const world = createWorld(document.getElementById('gl'));
 const pfx = createParticleFX(); // S0 preloader spark only; chapter worlds retired
 let chapterCur = -1;
+const STATION_WINDOWS = [[0, .04], [.04, .20], [.20, .34], [.34, .46], [.46, .56], [.56, .70], [.74, 1.01]];
 function chapterUpdate(pr) {
-  const ci = Math.min(CHAPTER_COUNT - 1, Math.round(pr * (CHAPTER_COUNT - 1)));
+  const ci = Math.max(0, STATION_WINDOWS.findIndex(([a, b]) => pr >= a && pr < b));
   if (ci === chapterCur) return;
   chapterCur = ci;
   document.body.dataset.chapter = ci;
@@ -112,6 +113,28 @@ if (virtual) {
 if (isTouch) {
   const c = document.querySelector('[data-ch="1"] .sec-micro');
   if (c) c.textContent = 'געו במסך — החומר מרגיש אתכם';
+}
+
+/* ---------- fluid camera-tied copy (typography v2: signs on a road) ---------- */
+// Each station's copy enters from blur-ahead, locks sharp at the camera beat,
+// and recedes (z + defocus) as the camera passes. Driven by chapter distance,
+// not scroll triggers; reveal-line IO remains as first-entry fallback.
+const copyBlocks = [...document.querySelectorAll('.panel')].map(p => ({
+  ch: parseInt(p.dataset.ch || '0', 10),
+  el: p.querySelector('.hero-copy, .sec-copy, .works-copy, .outro-inner, .cap') || p.querySelector('p, h1, h2'),
+})).filter(b => b.el);
+function fluidCopy(cf) {
+  for (const b of copyBlocks) {
+    const d = cf - b.ch;
+    const ad = Math.abs(d);
+    if (ad > 1.6) { if (b.el.style.opacity !== '0') b.el.style.opacity = '0'; continue; }
+    const vis = Math.min(1, Math.max(0, 1.25 - ad * 1.15));
+    const recede = Math.min(1, ad / 1.6);
+    b.el.style.opacity = vis.toFixed(3);
+    b.el.style.transform = `translateY(${(-d * 34).toFixed(1)}px) scale(${(1 - recede * 0.10).toFixed(3)})`;
+    const bl = Math.min(9, ad * 8);
+    b.el.style.filter = bl > 0.4 ? `blur(${bl.toFixed(1)}px)` : 'none';
+  }
 }
 
 /* ---------- reveals (one motion language) ---------- */
@@ -223,6 +246,7 @@ function loop(t) {
     if (shimmerMap._last !== sv) { shimmerMap.setAttribute('scale', sv); shimmerMap._last = sv; }
   }
   world.frame(t, pr);
+  fluidCopy(window.__stationCf ?? cfKiln);
   pfx.kilnFrame(t * 0.001, cfKiln, (cur.tx / innerWidth) * 2 - 1, (cur.ty / innerHeight) * 2 - 1);
   chapterUpdate(pr);
   sound.progress(pr);

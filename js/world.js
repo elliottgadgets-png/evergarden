@@ -25,23 +25,37 @@ float fbm(vec2 p){
   float v=0.0,a=0.5;
   for(int i=0;i<4;i++){v+=a*snoise(p);p*=2.03;a*=0.5;}
   return v;
+}
+float ridged(vec2 p){
+  float v=0.0,a=0.55;
+  for(int i=0;i<4;i++){v+=a*(1.0-abs(snoise(p)));p*=2.13;a*=0.52;}
+  return v;
 }`;
 
 export function createWorld(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1.0;
   renderer.setSize(innerWidth, innerHeight);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x14100c);
+  scene.background = null;
   scene.fog = new THREE.FogExp2(0x14100c, 0.0018);
   const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.5, 2600);
 
   /* ---------- the road the camera travels ---------- */
   const WAY = [
     [0, 15, 80], [34, 14, -140], [-44, 16, -380], [30, 13, -640],
-    [-34, 15, -900], [30, 14, -1180], [-18, 16, -1480], [12, 18, -1780], [0, 22, -2060],
+    [-34, 15, -900], [30, 14, -1180], [-18, 16, -1480], [12, 18, -1780], [0, 22, -2060], [0, 20, -2305],
   ];
   const curve = new THREE.CatmullRomCurve3(WAY.map(p => new THREE.Vector3(...p)), false, 'centripetal', 0.6);
+  // per-keyframe FOV along the same parameter (wide on travel beats, tight on arrivals)
+  const FOVS = [52, 58, 55, 50, 56, 52, 58, 50, 46, 42];
+  function fovAt(t) {
+    const x = Math.min(0.999, Math.max(0, t)) * (FOVS.length - 1);
+    const i = Math.floor(x), f = x - i;
+    return FOVS[i] + (FOVS[Math.min(FOVS.length - 1, i + 1)] - FOVS[i]) * f;
+  }
 
   /* ---------- terrain: builds itself with scroll ---------- */
   const tUni = {
@@ -62,11 +76,13 @@ export function createWorld(canvas) {
         void main(){
           vec3 pos = position;
           vec2 xz = vec2(pos.x, -pos.y); // plane is rotated; use world-ish coords
-          float ridge = fbm(xz * 0.0035);
+          float hills = fbm(xz * 0.0035);
           float detail = fbm(xz * 0.021 + 7.3);
-          float h = ridge * 64.0 + detail * 7.0;
-          // keep a travelling corridor lower: the road bed
+          float peaks = ridged(xz * 0.0016 + 11.7);
+          // far from the road the land rears up into real ranges
           float corridor = smoothstep(14.0, 150.0, abs(xz.x));
+          float peakMask = smoothstep(90.0, 420.0, abs(xz.x));
+          float h = hills * 46.0 + detail * 7.0 + pow(peaks, 1.9) * 210.0 * peakMask;
           h *= mix(0.06, 1.0, corridor);
           h *= uBuild;
           pos.z += h;
@@ -80,9 +96,10 @@ export function createWorld(canvas) {
         uniform vec3 uFogColor; uniform float uFogDensity;
         varying float vH; varying vec2 vXZ; varying float vFogDepth;
         void main(){
-          float hn = clamp(vH / 60.0, 0.0, 1.0);
-          vec3 base = mix(vec3(0.07,0.058,0.048), vec3(0.27,0.235,0.20), hn);   // charcoal → ash
-          base *= 0.55 + 0.45 * hn;                                             // valley shade
+          float hn = clamp(vH / 160.0, 0.0, 1.0);
+          vec3 base = mix(vec3(0.07,0.058,0.048), vec3(0.24,0.21,0.18), smoothstep(0.0,0.35,hn)); // valley floor → rock
+          base = mix(base, vec3(0.38,0.335,0.28), smoothstep(0.45,0.9,hn));      // high ash ridges
+          base *= 0.5 + 0.5 * smoothstep(0.0, 0.5, hn);                          // valley shade
           // molten veins: ridged noise cracks, ember-lit
           float v = 1.0 - abs(snoise(vXZ * 0.0075 + 3.1));
           v = smoothstep(0.885, 0.99, v) + 0.7 * smoothstep(0.94, 1.0, 1.0 - abs(snoise(vXZ * 0.02)));
@@ -191,10 +208,36 @@ export function createWorld(canvas) {
     scene.add(embers);
   }
 
+  /* ---------- atmosphere dome ---------- */
+  const skyUni = {
+    uSunDir: { value: new THREE.Vector3(0, 0.02, -1).normalize() },
+    uSun: { value: 0 },
+  };
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(2350, 32, 20),
+    new THREE.ShaderMaterial({
+      uniforms: skyUni, side: THREE.BackSide, depthWrite: false, fog: false,
+      vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform vec3 uSunDir; uniform float uSun; varying vec3 vDir;
+        void main(){
+          float h = clamp(vDir.y, -0.08, 1.0);
+          vec3 zen = vec3(0.030, 0.024, 0.020);
+          vec3 hor = vec3(0.105, 0.075, 0.048);
+          vec3 col = mix(hor, zen, pow(max(h, 0.0), 0.55));
+          float sunward = pow(max(dot(normalize(vDir), uSunDir), 0.0), 5.0);
+          col += vec3(0.85, 0.46, 0.16) * sunward * (0.12 + uSun * 0.85);
+          col += vec3(0.45, 0.24, 0.09) * pow(max(dot(normalize(vDir), uSunDir), 0.0), 1.6) * uSun * 0.22;
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    })
+  );
+  scene.add(sky);
+
   /* ---------- kiln sun on the horizon ---------- */
   const sun = new THREE.Mesh(
     new THREE.SphereGeometry(130, 40, 40),
-    new THREE.MeshBasicMaterial({ color: 0xE8862E, fog: false, transparent: true, opacity: 0 })
+    new THREE.MeshBasicMaterial({ color: 0xE8862E, fog: false, transparent: true, opacity: 0, toneMapped: false })
   );
   sun.position.set(0, -220, -2750);
   scene.add(sun);
@@ -208,7 +251,7 @@ export function createWorld(canvas) {
     return new THREE.CanvasTexture(c);
   })();
   const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false,
   }));
   sunGlow.scale.set(560, 560, 1);
   sunGlow.position.copy(sun.position);
@@ -217,28 +260,39 @@ export function createWorld(canvas) {
   /* ---------- the gate (S7) ---------- */
   const gate = new THREE.Group();
   const monoMat = new THREE.MeshBasicMaterial({ color: 0x241d16, fog: true });
-  for (const sx of [-26, 26]) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(14, 110, 14), monoMat);
-    m.position.set(sx, 55, 0);
+  for (const sx of [-24, 24]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(9, 150, 9), monoMat);
+    m.position.set(sx, 75, 0);
     gate.add(m);
   }
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(66, 12, 14), monoMat);
-  lintel.position.set(0, 104, 0);
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(57, 9, 9), monoMat);
+  lintel.position.set(0, 146, 0);
   gate.add(lintel);
-  const doorMat = new THREE.MeshBasicMaterial({ color: 0xF4C56B, fog: false, transparent: true, opacity: 0 });
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(30, 76), doorMat);
-  door.position.set(0, 40, 0);
+  const doorMat = new THREE.MeshBasicMaterial({ color: 0xF4C56B, fog: false, transparent: true, opacity: 0, toneMapped: false });
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(34, 132), doorMat);
+  door.position.set(0, 68, 0);
   gate.add(door);
   const doorGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false,
   }));
-  doorGlow.scale.set(230, 230, 1); doorGlow.position.set(0, 42, 6);
+  doorGlow.scale.set(300, 340, 1); doorGlow.position.set(0, 70, 6);
   gate.add(doorGlow);
   gate.position.set(0, 0, -2380);
   scene.add(gate);
 
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  // station remap (camera-path spec v1.0 windows): dwell at stations, travel between
+  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.70,5/6],[0.74,5/6+0.004],[0.88,0.93],[1,1]];
+  function pathT(pr) {
+    for (let i = 1; i < REMAP.length; i++) {
+      if (pr <= REMAP[i][0]) {
+        const [p0, q0] = REMAP[i - 1], [p1, q1] = REMAP[i];
+        return q0 + (q1 - q0) * ((pr - p0) / Math.max(1e-6, p1 - p0));
+      }
+    }
+    return 1;
+  }
   let prS = 0;
   function frame(tms, pr) {
     const t = tms * 0.001;
@@ -248,6 +302,8 @@ export function createWorld(canvas) {
     tUni.uBuild.value = smooth(0.0, 0.30, prS);
     tUni.uVeins.value = smooth(0.10, 0.26, prS) * (1.0 - smooth(0.58, 0.78, prS) * 0.8);
     tUni.uSun.value = smooth(0.52, 0.80, prS);
+    skyUni.uSun.value = tUni.uSun.value;
+    sky.position.copy(camera.position);
     pathUni.uReveal.value = prS * 1.02;
 
     const sunRise = smooth(0.52, 0.86, prS);
@@ -263,16 +319,27 @@ export function createWorld(canvas) {
     doorMat.opacity = gateIn * 0.8;
     doorGlow.material.opacity = gateIn * 0.4;
 
-    const pq = Math.min(0.999, prS * 0.985);
+    const pq = Math.min(0.999, pathT(prS));
+    window.__stationCf = pq * 6;
+    const scrollMoving = Math.abs(pr - (frame._lastPr ?? pr)) > 1e-5;
+    frame._lastPr = pr;
     const pos = curve.getPointAt(pq);
     const ahead = curve.getPointAt(Math.min(1, pq + 0.045));
+    if (ahead.distanceTo(pos) < 40) {
+      const tan = curve.getTangentAt(Math.min(0.999, pq));
+      ahead.set(pos.x + tan.x * 100, pos.y + tan.y * 100, pos.z + tan.z * 100);
+    }
     camera.position.set(
-      pos.x + Math.sin(t * 0.5) * 0.7,
-      pos.y + 6 + Math.sin(t * 0.8) * 0.45,
+      pos.x + (scrollMoving ? 0 : Math.sin(t * 0.63) * 0.9),
+      pos.y + 6 + (scrollMoving ? 0 : Math.sin(t * 0.71 + 1.7) * 0.55),
       pos.z
     );
     camera.lookAt(ahead.x * 0.6, ahead.y - 8, ahead.z);
     camera.rotation.z += Math.sin(t * 0.32) * 0.006;
+    const fov = fovAt(pq);
+    if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    // exposure: night opening opens up, kiln flood peaks late
+    renderer.toneMappingExposure = 1.0;
 
     renderer.render(scene, camera);
   }
