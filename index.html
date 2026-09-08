@@ -3,111 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EVERGARDEN — גן שגדל לנצח</title>
-<meta name="description" content="אתר חי שלעולם לא נגמר. נבנה מחדש בכל מחזור.">
+<title>נצח — האתר שלעולם לא נגמר</title>
+<meta name="description" content="אתר חי. כל אות נושמת, כל גלילה מחייה אותה מחדש.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2238%22 fill=%22%23ece9e2%22/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@200;400;700;900&family=Heebo:wght@100;300;400;700&family=Frank+Ruhl+Libre:wght@300;500;900&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;900&family=Heebo:wght@100;200;300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- Preloader -->
 <div id="preloader" aria-hidden="true">
-  <svg id="sprout" viewBox="0 0 100 100" width="72" height="72">
-    <path id="stem" d="M50 90 C 50 70, 50 55, 50 40" fill="none" stroke="#9ff5c8" stroke-width="2" stroke-linecap="round"/>
-    <path id="leaf-l" d="M50 55 C 38 50, 30 40, 28 28 C 42 32, 50 42, 50 55" fill="#9ff5c8" opacity="0"/>
-    <path id="leaf-r" d="M50 45 C 62 40, 70 30, 72 18 C 58 22, 50 32, 50 45" fill="#d4ff6a" opacity="0"/>
-  </svg>
   <div id="load-count">0</div>
-  <div id="load-word">נוטעים זרע</div>
 </div>
 
-<!-- Living shader sky -->
-<canvas id="sky"></canvas>
-
-<!-- spore trail -->
-<canvas id="trail"></canvas>
-
-<!-- Grain -->
+<canvas id="word"></canvas>
 <div id="grain" aria-hidden="true"></div>
-
-<!-- Custom cursor -->
 <div id="cursor-dot" aria-hidden="true"></div>
 <div id="cursor-ring" aria-hidden="true"></div>
 
-<!-- Fixed frame -->
 <header id="frame">
-  <div class="frame-mark">EVERGARDEN<span class="frame-seed">seed 001</span></div>
-  <nav class="frame-nav">
-    <a href="#manifesto" data-nav>מניפסט</a>
-    <a href="#field" data-nav>השדה</a>
-    <a href="#growth" data-nav>צמיחה</a>
-  </nav>
-  <div class="frame-status"><span id="status-dot"></span>גדל עכשיו</div>
+  <div class="frame-mark">נצח<span class="frame-seed">EVERGARDEN · SEED 002</span></div>
+  <div class="frame-status"><span id="status-dot"></span>חי</div>
 </header>
 
 <main id="scroll-content">
-
-  <!-- HERO -->
-  <section id="hero" class="panel">
-    <div class="hero-inner">
-      <p class="hero-kicker reveal-line">אתר חי · מהדורה ראשונה</p>
-      <h1 class="hero-title" aria-label="Evergarden">
-        <span class="ht-row"><span class="ht-word">EVER</span></span>
-        <span class="ht-row"><span class="ht-word">GARDEN</span></span>
-      </h1>
-      <p class="hero-sub reveal-line">גן דיגיטלי שלעולם לא נגמר.<br>כל ביקור — עונה חדשה.</p>
-      <div class="hero-scroll-hint" aria-hidden="true">
-        <span class="hsh-text">גללו כדי לגדול</span>
-        <span class="hsh-line"></span>
-      </div>
-    </div>
+  <section class="panel" data-ch="0">
+    <p class="cap cap-hero reveal-line">אתר שלעולם לא נגמר<span class="cap-sep">·</span>גללו</p>
   </section>
-
-  <!-- MANIFESTO -->
-  <section id="manifesto" class="panel">
-    <div class="chapter-tag reveal-line">פרק 01 — מניפסט</div>
-    <div class="manifesto-text">
-      <p class="m-line">אתר הוא לא דף.</p>
-      <p class="m-line">אתר הוא <em>מקום</em>.</p>
-      <p class="m-line">ומקום טוב לא נבנה ביום אחד —</p>
-      <p class="m-line">הוא <em>גדל</em>.</p>
-      <p class="m-line m-small">הגן הזה נטוע בקוד פתוח, משתנה בכל מחזור,<br>ומגיב לכל מי שמבקר בו.</p>
-    </div>
+  <section class="panel" data-ch="1">
+    <p class="cap reveal-line">כל גלילה מחייה את האותיות מחדש</p>
   </section>
-
-  <!-- LIVING FIELD -->
-  <section id="field" class="panel panel-tall">
-    <div class="chapter-tag reveal-line">פרק 02 — השדה החי</div>
-    <h2 class="section-title reveal-line">הזיזו את הסמן.<br>השדה מגיב.</h2>
-    <canvas id="field-canvas"></canvas>
-    <p class="field-caption reveal-line">כל חלקיק כאן מחושב בזמן אמת. שום פריים לא חוזר על עצמו.</p>
+  <section class="panel" data-ch="2">
+    <p class="cap reveal-line">הזיזו את הסמן — האותיות מרגישות אתכם</p>
   </section>
-
-  <!-- GROWTH -->
-  <section id="growth" class="panel panel-xl">
-    <div class="growth-sticky">
-      <div class="chapter-tag reveal-line">פרק 03 — צמיחה</div>
-      <h2 class="section-title">העץ הזה גדל<br>עם הגלילה שלכם</h2>
-      <canvas id="growth-canvas"></canvas>
-      <div class="growth-meter"><span id="growth-pct">0%</span> גדילה</div>
-    </div>
+  <section class="panel" data-ch="3">
+    <p class="cap reveal-line">ובסוף, הכל הופך לאור</p>
   </section>
-
-  <!-- OUTRO -->
-  <section id="outro" class="panel">
+  <section class="panel panel-outro" data-ch="4">
     <div class="outro-inner">
-      <h2 class="outro-title reveal-line">האתר הזה<br>לעולם לא יהיה גמור.</h2>
-      <p class="outro-text reveal-line">הוא נבנה מאפס בכל מחזור: קוד, שיידרים, אנימציות — הכל בעבודת יד.<br>בפעם הבאה שתבקרו, משהו כבר יהיה אחר.</p>
+      <p class="outro-big reveal-line">האתר הזה<br>לעולם לא יהיה גמור.</p>
+      <p class="outro-small reveal-line">כל מחזור הוא נטוע מחדש. כל ביקור — עונה אחרת.</p>
       <div class="outro-meta reveal-line">
-        <span class="om-item">SEED 001 — מהדורת היסוד</span>
-        <a class="om-item om-link" href="https://github.com/elliottgadgets-png/evergarden" target="_blank" rel="noopener">הקוד פתוח ב־GitHub ↗</a>
+        <span class="om-item">SEED 002 — נצח</span>
+        <a class="om-item om-link" href="https://github.com/elliottgadgets-png/evergarden" target="_blank" rel="noopener">הקוד פתוח ↗</a>
       </div>
     </div>
   </section>
-
 </main>
 
 <script type="module" src="js/main.js"></script>
