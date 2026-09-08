@@ -122,6 +122,7 @@ const copyBlocks = [...document.querySelectorAll('.panel')].map(p => {
 function fluidCopy(cf) {
   for (const b of copyBlocks) {
     b.lines.forEach((ln, i) => {
+      if (b.ch === 3 && cf > 2.25) { if (ln.style.opacity !== '0') ln.style.opacity = '0'; return; } // relief dwell owns ch3
       const d = cf - b.ch - i * 0.055;              // baseline stagger: lines arrive in sequence
       const ad = Math.abs(d);
       if (ad > 1.6) { if (ln.style.opacity !== '0') ln.style.opacity = '0'; return; }
@@ -129,11 +130,11 @@ function fluidCopy(cf) {
       const vis = t0 * t0 * (3 - 2 * t0);
       const sharp = 1 - Math.min(1, ad * 1.3);
       ln.style.opacity = vis.toFixed(3);
-      ln.style.transform = `translateY(${(-d * 30).toFixed(1)}px) scale(${(0.94 + sharp * 0.06).toFixed(3)})`;
-      const bl = Math.min(5.5, Math.max(0, ad - 0.08) * 7);
-      ln.style.filter = bl > 0.4 ? `blur(${bl.toFixed(1)}px)` : 'none';
+      ln.style.transform = `translateY(${(-d * 14).toFixed(1)}px) scale(${(0.97 + sharp * 0.03).toFixed(3)})`;
+      const bl = Math.min(1.6, Math.max(0, ad - 0.35) * 2.2);
+      ln.style.filter = bl > 0.5 ? `blur(${bl.toFixed(1)}px)` : 'none';
       const head = (ln.matches && ln.matches('h1, h2, .hero-title, .sec-title, .works-title, .cf-big')) ? ln : (ln.querySelector ? ln.querySelector('h1, h2, .hero-title, .sec-title, .works-title, .cf-big') : null);
-      if (head) head.style.letterSpacing = `calc(var(--base-track, 0em) + ${(ad * 0.09).toFixed(3)}em)`;
+      if (head) head.style.letterSpacing = `calc(var(--base-track, 0em) + ${(ad * 0.02).toFixed(3)}em)`;
       if (ln.tagName === 'P' && !head) ln.style.fontVariationSettings = `'wght' ${(260 + sharp * 120) | 0}`;
     });
   }

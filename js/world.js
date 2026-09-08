@@ -74,7 +74,7 @@ export function createWorld(canvas) {
       uniforms: tUni,
       vertexShader: NOISE + /* glsl */`
         uniform float uTime; uniform float uBuild;
-        varying float vH; varying vec2 vXZ; varying float vFogDepth;
+        varying float vH; varying vec2 vXZ; varying float vFogDepth; varying float vQuarry;
         void main(){
           vec3 pos = position;
           vec2 xz = vec2(pos.x, -pos.y); // plane is rotated; use world-ish coords
@@ -86,9 +86,13 @@ export function createWorld(canvas) {
           float peakMask = smoothstep(90.0, 420.0, abs(xz.x));
           float h = hills * 46.0 + detail * 7.0 + pow(peaks, 1.9) * 210.0 * peakMask;
           h *= mix(0.06, 1.0, corridor);
+          // S4 quarry slice: around the relief station the worked land is flat basalt, no ranges
+          float quarry = 1.0 - smoothstep(0.55, 1.0, length((xz - vec2(60.0, -386.0)) / vec2(950.0, 720.0)));
+          h *= 1.0 - quarry * 0.96;
+          h -= quarry * 1.5; // shallow worked depression
           h *= uBuild;
           pos.z += h;
-          vH = h; vXZ = xz;
+          vH = h; vXZ = xz; vQuarry = quarry;
           vec4 mv = modelViewMatrix * vec4(pos, 1.0);
           vFogDepth = -mv.z;
           gl_Position = projectionMatrix * mv;
@@ -96,7 +100,7 @@ export function createWorld(canvas) {
       fragmentShader: NOISE + /* glsl */`
         uniform float uTime; uniform float uVeins; uniform float uSun;
         uniform vec3 uFogColor; uniform float uFogDensity;
-        varying float vH; varying vec2 vXZ; varying float vFogDepth;
+        varying float vH; varying vec2 vXZ; varying float vFogDepth; varying float vQuarry;
         void main(){
           float hn = clamp(vH / 160.0, 0.0, 1.0);
           vec3 base = mix(vec3(0.07,0.058,0.048), vec3(0.24,0.21,0.18), smoothstep(0.0,0.35,hn)); // valley floor → rock
@@ -107,7 +111,9 @@ export function createWorld(canvas) {
           v = smoothstep(0.885, 0.99, v) + 0.7 * smoothstep(0.94, 1.0, 1.0 - abs(snoise(vXZ * 0.02)));
           float pulse = 0.75 + 0.25 * sin(uTime * 1.4 + vXZ.x * 0.02 + vXZ.y * 0.013);
           vec3 ember = vec3(0.91, 0.52, 0.18);
-          vec3 col = base + ember * (v * uVeins * pulse * 1.9 + uVeins * 0.05);
+          vec3 col = base + ember * (v * uVeins * pulse * 1.9 * (1.0 - vQuarry) + uVeins * 0.05 * (1.0 - vQuarry));
+          // quarry floor: worked dark basalt with faint ash variation, matte
+          col = mix(col, vec3(0.050, 0.044, 0.038) * (0.8 + 0.4 * fbm(vXZ * 0.05)), vQuarry * 0.92);
           // kiln-sun warmth kissing the far ridge tops
           col += vec3(0.85, 0.5, 0.2) * pow(hn, 2.0) * uSun * 0.35;
           float f = 1.0 - exp(-uFogDensity * uFogDensity * vFogDepth * vFogDepth);
@@ -326,7 +332,7 @@ export function createWorld(canvas) {
   nicheShots.forEach((src, i) => {
     const isRelief = i === 0; // S4 lead work: fired basalt relief (v3.1) - soshimi, facing the road
     const niche = isRelief ? makeRelief({ map: texLoader.load('assets/work-soshimi.jpg'), depthSpec: SOSHIMI_DEPTH }) : makeNiche(1.6, 1.05);
-    const nt = 0.58 + i * 0.09;
+    const nt = (isRelief ? 0.615 : 0.58 + i * 0.09);
     const np = curve.getPointAt(nt);
     const side = i % 2 === 0 ? 1 : -1;
     niche.scale.setScalar(isRelief ? 1.15 : 13);
@@ -356,20 +362,26 @@ export function createWorld(canvas) {
     const backMats = back.material;
     backMats.transparent = true;
     propsUpdaters.push((t, pr, pq) => {
-      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.075));
+      let ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.075));
+      if (isRelief) {
+        // relief arc unfolds during the approach and completes at the dwell (pq 0.58)
+        const a = Math.min(1, Math.max(0, (pq - 0.495) / 0.085));
+        ph = window.__egArcOverride != null ? window.__egArcOverride : a * a * (3 - 2 * a);
+      }
       const ease = ph * ph * (3 - 2 * ph);
       niche.userData.update(t, ph);
       if (isRelief) {
-        const tt = Math.min(1, Math.max(0, (ph - 0.55) / 0.45));
+        const tt = Math.min(1, Math.max(0, (ph - 0.6) / 0.4));
         const ts = tt * tt * (3 - 2 * tt);
-        niche.rotation.y = -side * (0.35 + ts * (Math.PI / 2 - 0.35));
+        niche.rotation.y = -side * (0.55 + ts * 0.2);
       }
       niche.children.forEach((ch, ci) => {
         if (!ch.material) return;
         const isBar = !isRelief && ci < 4; // frame bars hidden: the lit opening is the alcove
-        ch.material.opacity = (isBar ? 0.0 : 1.0) * ease;
+        ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, ph * 2.2) : ease);
       });
       backMats.opacity = ease * 0.92;
+      if (!isRelief) { niche.visible = ph > 0.005; back.visible = ease > 0.01; } // far niches never show as black boxes
       caseLight.intensity = (150 + ph * 450) * (0.15 + 0.85 * ease);
     });
   });
@@ -560,11 +572,12 @@ export function createWorld(canvas) {
   });
 
   /* ---------- authored silhouettes: spires that thicken into the canyon ---------- */
-  const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true });
+  const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true, transparent: true, opacity: 0 });
+  propsUpdaters.push((t, pr) => { spireMat.opacity = Math.min(1, Math.max(0, (pr - 0.05) / 0.06)); });
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (let i = 0; i < 22; i++) {
-    const st = 0.08 + (i / 22) * 0.86 + rnd() * 0.02;
+    const st = 0.16 + (i / 22) * 0.78 + rnd() * 0.02; // clear of the hero opening
     const sp = curve.getPointAt(Math.min(0.98, st));
     const side = rnd() > 0.5 ? 1 : -1;
     const canyon = st > 0.32 && st < 0.60; // S3-S4: walls close in
@@ -579,6 +592,7 @@ export function createWorld(canvas) {
       posA.setZ(v, posA.getZ(v) * (0.82 + rnd() * 0.4));
     }
     geo.computeVertexNormals();
+    if (st > 0.52 && st < 0.64) continue; // quarry slice: no spire silhouettes near the relief
     const spire = new THREE.Mesh(geo, spireMat);
     spire.position.set(sp.x + side * dist, h * 0.32, sp.z + (rnd() - 0.5) * 60);
     spire.rotation.y = rnd() * Math.PI;
