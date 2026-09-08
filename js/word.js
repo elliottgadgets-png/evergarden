@@ -15,8 +15,8 @@ const CHAPTERS = [
     bg: [12,44,37],    accent: [111,227,193], cxOff: 0.17, tint: 0.32 },
   { word: 'אור',   pointer: 1.0, glow: 1.9, lift: -0.4, spread: 0,
     bg: [46,17,30],    accent: [255,157,122], cxOff: 0, tint: 0.26 },
-  { word: null,    pointer: 1.2, glow: 0.75, lift: -1.1, spread: 1, // embers
-    bg: [11,11,13],    accent: [245,194,107], cxOff: 0 },
+  { word: null,    pointer: 0.6, glow: 0.32, lift: -0.3, spread: 1, // starfield: the works float over it; these are the embers
+    bg: [8,8,10],     accent: [245,194,107], cxOff: 0, tint: 0 },
   // bloom: the embers remember what they were — the swarm resurrects
   // into the wordmark, smaller and higher, burning brighter.
   { word: 'נצח',   pointer: 1.2, glow: 1.4, lift: 0.0,  spread: 0, scale: 0.4, cyOff: -0.23,
