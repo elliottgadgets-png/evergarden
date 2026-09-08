@@ -369,6 +369,10 @@ export function createWorld(canvas) {
         ph = window.__egArcOverride != null ? window.__egArcOverride : a * a * (3 - 2 * a);
       }
       const ease = ph * ph * (3 - 2 * ph);
+      if (isRelief) {
+        const mLift = innerWidth < 720 ? 4.2 : 0;
+        niche.position.y = np.y + 13 + mLift * (1 - ph); // mobile: slab invites the stop during approach
+      }
       niche.userData.update(t, ph);
       if (isRelief) {
         const tt = Math.min(1, Math.max(0, (ph - 0.6) / 0.4));
@@ -679,7 +683,7 @@ export function createWorld(canvas) {
     // fired-relief dwell: gaze eases from the road to the monolith and back
     const rPh = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.58) / 0.075));
     const rEase = rPh * rPh * (3 - 2 * rPh);
-    const lx = ahead.x * 0.6 + (reliefStation.pos.x - ahead.x * 0.6) * rEase;
+    const lx = ahead.x * 0.6 + (reliefStation.pos.x + 3.2 - ahead.x * 0.6) * rEase; // gaze past face center: no right-edge crop at full dwell
     const ly = (ahead.y - 8) + (reliefStation.pos.y + 1 - (ahead.y - 8)) * rEase;
     const lz = ahead.z + (reliefStation.pos.z - ahead.z) * rEase;
     camera.lookAt(lx, ly, lz);
