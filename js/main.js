@@ -334,6 +334,9 @@ function bootClassic() {
     el.prepend(img);
     grid.appendChild(el);
   }
+  // repo is private: the "open code" footer link 404s for visitors - remove it in classic
+  const repoLink = document.querySelector('.outro-meta a[href*="github.com"]');
+  if (repoLink) repoLink.remove();
   document.querySelectorAll('.reveal-line,[data-reveal]').forEach(el => el.classList.add('is-in'));
 }
 

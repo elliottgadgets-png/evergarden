@@ -332,3 +332,11 @@ body.classic .cframe { position: static; inset: auto; opacity: 1 !important; tra
 body.classic .panel-outro { padding-bottom: 90px; }
 body.classic .outro-inner { padding-bottom: 0; }
 body.classic #frame { position: absolute; opacity: 1; }
+
+/* classic gate-2 fixes: hero CTA takes the final-act gold-kiln treatment (still disabled, no target);
+   the private-repo "open code" link is removed in classic (see bootClassic). */
+body.classic .hero-copy .cta-pill.is-disabled {
+  background: var(--ember); color: #0b0b0d;
+  font-weight: 600; letter-spacing: .06em;
+  padding: 16px 42px; font-size: clamp(14px, 1.5vw, 19px);
+}
