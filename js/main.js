@@ -8,6 +8,7 @@ import { createWorld } from './world.js';
 const CHAPTER_COUNT = 7;
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
+const isMobile = innerWidth < 700 || isTouch;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- grain ---------- */
@@ -127,7 +128,13 @@ function fluidCopy(cf) {
       const ad = Math.abs(d);
       if (ad > 1.6) { if (ln.style.opacity !== '0') ln.style.opacity = '0'; return; }
       const t0 = Math.min(1, Math.max(0, 1.35 - ad * 1.05));
-      const vis = t0 * t0 * (3 - 2 * t0);
+      let vis = t0 * t0 * (3 - 2 * t0);
+      if (isMobile) { // mobile: one beat at a time - a block is fully gone before the next beat enters, no top-edge fragments
+        const dBlock = cf - b.ch - 0.10;
+        const ein = Math.min(1, Math.max(0, (d + 0.50) / 0.30));
+        const eout = Math.min(1, Math.max(0, (0.45 - dBlock) / 0.25));
+        vis = (ein * ein * (3 - 2 * ein)) * (eout * eout * (3 - 2 * eout));
+      }
       const sharp = 1 - Math.min(1, ad * 1.3);
       ln.style.opacity = vis.toFixed(3);
       ln.style.transform = `translateY(${(-d * 14).toFixed(1)}px) scale(${(0.97 + sharp * 0.03).toFixed(3)})`;
@@ -189,7 +196,13 @@ const cStage = document.querySelector('.cinema-stage');
 const cClose = document.querySelector('.cframe-close');
 function cinemaDrive(cf) {
   if (!cinemaTrack) return;
-  if (cf > 5.1) return;
+  if (cf > 5.1) { // story is over: fade the whole stage out so its last beat never lingers into the outro
+    const o = Math.max(0, 1 - (cf - 5.1) / 0.35);
+    if (cStage) cStage.style.opacity = String(o);
+    if (cBurn) cBurn.style.opacity = '0';
+    if (o === 0) for (const el of cFrames) el.style.opacity = '0';
+    return;
+  }
   if (cf < 3.9) { // the story waits for its panel to fully take the viewport
     if (cStage) cStage.style.opacity = '0';
     if (cBurn) cBurn.style.opacity = '0';
@@ -248,6 +261,8 @@ function loop(t) {
   if (worksInner) { worksInner.style.transition = 'opacity .4s'; worksInner.style.opacity = pr > 0.452 ? '0' : ''; } // works DOM fully exits before the relief act
   const proofGrid = document.querySelector('.proof-grid');
   if (proofGrid) { proofGrid.style.transition = 'opacity .4s'; proofGrid.style.opacity = pr > 0.452 ? '0' : ''; } // S3 proof cells retire with it
+  const capLine = document.querySelector('.panel[data-ch="5"] .cap');
+  if (capLine) { capLine.style.transition = 'opacity .3s'; capLine.style.opacity = pr > 0.915 ? '0' : ''; } // the cap beat exits before the outro enters: no cropped fragment at the top edge
   const cfKiln = pr * (CHAPTER_COUNT - 1);
   if (shimmerMap && !prefersReduced) {
     shimmerV = Math.min(18, Math.abs(scrollCurrent - lastScroll) * 0.42);

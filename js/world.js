@@ -316,26 +316,7 @@ export function createWorld(canvas) {
   const basalt2 = () => new THREE.MeshStandardMaterial({ color: 0x1c1510, roughness: 0.95, metalness: 0.04 });
   const texLoader = new THREE.TextureLoader();
 
-  // S2 close: a molten seep beside the road - where the ember veins come from (crucible prop removed: primitive geometry)
-  {
-    const cp = curve.getPointAt(0.285);
-    const pool = new THREE.Mesh(new THREE.CircleGeometry(7, 28),
-      new THREE.MeshBasicMaterial({ color: 0xE8862E, transparent: true, opacity: 0, fog: false, toneMapped: false }));
-    pool.rotation.x = -Math.PI / 2; pool.position.set(cp.x + 20, 0.4, cp.z - 2);
-    scene.add(pool);
-    const seepGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
-    seepGlow.scale.set(26, 10, 1); seepGlow.position.set(cp.x + 20, 2.5, cp.z - 2);
-    scene.add(seepGlow);
-    const pourLight = new THREE.PointLight(0xE8862E, 900, 90, 2);
-    pourLight.position.set(cp.x + 16, 6, cp.z);
-    scene.add(pourLight);
-    propsUpdaters.push((t, pr, pq) => {
-      const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.268) / 0.06));
-      pourLight.intensity = 250 + ph * 800;
-      pool.material.opacity = ph * 0.6;
-      seepGlow.material.opacity = ph * 0.35;
-    });
-  }
+  // S2 seep removed: the flat glowing pool read as an artifact ellipse on the ground
 
   // S4: three lit niches set into the canyon wall, each holding a finished piece
   const reliefStations = []; // fired-relief stations: {pos, side, gc} gc = gaze center in pq
@@ -451,59 +432,9 @@ export function createWorld(canvas) {
   }
 
 
-  /* ---------- S3 monument: basalt slab with a living site-screen ---------- */
-  const monGp = curve.getPointAt(0.475);
-  const monGeo = new THREE.BoxGeometry(26, 38, 5, 5, 7, 2);
-  {
-    const pa = monGeo.attributes.position;
-    let s3 = 11;
-    const rn = () => { s3 = (s3 * 16807) % 2147483647; return s3 / 2147483647; };
-    for (let v = 0; v < pa.count; v++) {
-      const taper = 1 - Math.max(0, pa.getY(v)) / 38 * 0.24;
-      pa.setX(v, pa.getX(v) * taper + (rn() - 0.5) * 2.6);
-      pa.setY(v, pa.getY(v) + (rn() - 0.5) * 1.8);
-    }
-    monGeo.computeVertexNormals();
-  }
-  const monument = new THREE.Mesh(monGeo, basalt.clone());
-  monument.material.transparent = true;
-  monument.material.depthWrite = false;
-  const monumentFades = [monument.material];
-  const monumentObjects = [monument];
-  monument.position.set(monGp.x - 24, 10.5, monGp.z - 6);
-  monument.rotation.y = 0.42;
-  monument.rotation.z = 0.055;
-  scene.add(monument);
-  // flanking base rocks so the slab grows out of the ground
-  [[-13, 2.5, 3, 7, 11, 5], [11, 1.8, 5, 5.5, 8, 4.5], [2, 1.4, 7.5, 4, 6, 4]].forEach(([ox, oy, oz, w, h, d], ri) => {
-    const fr = new THREE.BoxGeometry(w, h, d, 3, 3, 2);
-    const fa = fr.attributes.position; let fs = 91 + ri * 37;
-    const frn = () => { fs = (fs * 16807) % 2147483647; return fs / 2147483647; };
-    for (let v = 0; v < fa.count; v++) {
-      fa.setX(v, fa.getX(v) + (frn() - 0.5) * 1.8);
-      fa.setY(v, fa.getY(v) + (frn() - 0.5) * 1.4);
-      fa.setZ(v, fa.getZ(v) + (frn() - 0.5) * 1.2);
-    }
-    fr.computeVertexNormals();
-    const fm = new THREE.Mesh(fr, basalt.clone());
-    fm.material.transparent = true;
-    fm.material.depthWrite = false;
-    monumentFades.push(fm.material); monumentObjects.push(fm);
-    fm.position.set(monGp.x - 24 + ox, oy, monGp.z - 6 + oz);
-    fm.rotation.y = frn() * 1.2;
-    scene.add(fm);
-  });
-  // the monument is pure basalt now: the mini-site screen read as a webpage fragment, not craft
-  const monLight = new THREE.PointLight(0xE8862E, 350, 80, 2);
-  monLight.position.set(monGp.x - 16, 18, monGp.z + 14);
-  scene.add(monLight);
-  propsUpdaters.push((t, pr, pq) => {
-    const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.44) / 0.10));
-    monLight.intensity = 120 + ph * 500;
-  });
+  /* S3 monument removed: without content it read as a pale placeholder block on the horizon */
 
-
-  /* ---------- S5: the projection rock — the film plays on the land ---------- */
+    /* ---------- S5: the projection rock — the film plays on the land ---------- */
   const rockGp = curve.getPointAt(0.84);
   const rockGeo = new THREE.BoxGeometry(84, 46, 6, 7, 5, 1);
   {
@@ -572,7 +503,7 @@ export function createWorld(canvas) {
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // station remap (camera-path spec v1.0 windows): dwell at stations, travel between
-  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.66,0.830],[0.72,0.848],[0.82,0.930],[1,1]]; // 0.56-0.66: relief #2 dwell; 0.66-0.72: rock beat; 0.72-0.82: relief #3 dwell; 0.82-1: door approach
+  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.40,2/6],[0.46,0.54],[0.56,4/6],[0.66,0.830],[0.72,0.848],[0.82,0.930],[1,1]]; // travel compressed + relief #1 dwell enters as the slab fires: no dead beat // 0.56-0.66: relief #2 dwell; 0.66-0.72: rock beat; 0.72-0.82: relief #3 dwell; 0.82-1: door approach
   function pathT(pr) {
     for (let i = 1; i < REMAP.length; i++) {
       if (pr <= REMAP[i][0]) {
@@ -605,9 +536,6 @@ export function createWorld(canvas) {
     tUni.uFogDensity.value = scene.fog.density;
     pathUni.uFogDensity.value = scene.fog.density;
 
-    const monFade = 1 - smooth(0.445, 0.475, prS); // S3 monument retires before the relief act
-    for (const mm of monumentFades) mm.opacity = monFade;
-    for (const mo of monumentObjects) mo.visible = monFade > 0.01;
     const rockIn = smooth(0.66, 0.72, prS); // S5 projection rock exists only in its own act
   rockMat.opacity = rockIn; rock.visible = rockIn > 0.01;
   const gateIn = smooth(0.84, 0.97, prS);
