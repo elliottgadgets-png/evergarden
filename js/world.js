@@ -391,7 +391,7 @@ export function createWorld(canvas) {
         ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, ph * 2.2) : ease);
       });
       backMats.opacity = ease * 0.92;
-      if (!isRelief) { niche.visible = ph > 0.005; back.visible = ease > 0.01; } // far niches never show as black boxes
+      niche.visible = ph > 0.005; if (!isRelief) back.visible = ease > 0.01; // ahead slabs never ghost into earlier acts: the carved shader face ignores material.opacity, so hard-gate visibility on the arc
       caseLight.intensity = (150 + ph * 450) * (0.15 + 0.85 * ease);
     });
   });
