@@ -10,6 +10,9 @@ const CHAPTER_COUNT = 7;
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const isMobile = innerWidth < 700 || isTouch;
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Classic path: reduced-motion, explicit ?classic / #classic, or WebGL failure.
+let classicMode = prefersReduced || location.hash.indexOf('classic') !== -1
+  || new URLSearchParams(location.search).has('classic');
 
 /* ---------- grain ---------- */
 (function grain() {
@@ -34,7 +37,11 @@ const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- the world + sound ---------- */
 const sound = createSound();
-const world = createWorld(document.getElementById('gl'));
+let world = null;
+if (!classicMode) {
+  try { world = createWorld(document.getElementById('gl')); }
+  catch (err) { classicMode = true; } // no WebGL: fall back to the classic page
+}
 const pfx = createParticleFX(); // S0 preloader spark only; chapter worlds retired
 let chapterCur = -1;
 const STATION_WINDOWS = [[0, .04], [.04, .20], [.20, .34], [.34, .46], [.46, .56], [.56, .70], [.74, 1.01]];
@@ -58,7 +65,7 @@ if (soundBtn) soundBtn.addEventListener('click', () => {
 /* ---------- virtual smooth scroll ---------- */
 const content = document.getElementById('scroll-content');
 let scrollTarget = 0, scrollCurrent = 0, maxScroll = 0;
-const virtual = !isTouch && !prefersReduced;
+const virtual = !isTouch && !prefersReduced && !classicMode;
 if (!virtual) document.body.classList.add('native-scroll');
 
 function measure() { maxScroll = Math.max(0, content.scrollHeight - innerHeight); }
@@ -296,7 +303,7 @@ let p = 0;
 let fontsReady = false;
 document.fonts.ready.then(() => { fontsReady = true; });
 let spark = null;
-pfx.bootSpark().then(h => { spark = h; });
+if (!classicMode) pfx.bootSpark().then(h => { spark = h; });
 // spark runs on its own clock until the main loop takes over
 let sparkAlive = true;
 (function sparkLoop(t) {
@@ -305,6 +312,32 @@ let sparkAlive = true;
   requestAnimationFrame(sparkLoop);
 })(0);
 const labelLetters = loadLabel ? [...loadLabel.children] : [];
+
+function bootClassic() {
+  document.body.classList.add('classic', 'native-scroll', 'is-open');
+  const preEl = document.getElementById('preloader'); if (preEl) preEl.remove();
+  const fr = document.getElementById('frame'); if (fr) fr.style.opacity = '1';
+  // works: bring the plates into the section as static cards with their images
+  const grid = document.querySelector('.works-grid');
+  const imgs = {
+    'plate-soshimi': ['assets/work-soshimi.jpg', 'סושימי — דמו אינטראקטיבי לאתר מסעדה'],
+    'plate-verdant': ['assets/work-verdant.jpg', 'The Sound Room — דמו אינטראקטיבי לחנות כלי נגינה'],
+    'plate-video': ['assets/work-videoeditor.jpg', 'ניר — דמו אינטראקטיבי לדף נחיתה'],
+  };
+  for (const id of Object.keys(imgs)) {
+    const el = document.getElementById(id);
+    if (!el || !grid) continue;
+    el.classList.add('is-on');
+    el.setAttribute('aria-hidden', 'false');
+    const img = document.createElement('img');
+    img.className = 'wp-img'; img.src = imgs[id][0]; img.alt = imgs[id][1]; img.loading = 'lazy';
+    el.prepend(img);
+    grid.appendChild(el);
+  }
+  document.querySelectorAll('.reveal-line,[data-reveal]').forEach(el => el.classList.add('is-in'));
+}
+
+if (classicMode) { bootClassic(); } else {
 const tick = setInterval(() => {
   const cap = fontsReady ? 100 : 88;
   p = Math.min(cap, p + 2 + Math.random() * 6);
@@ -313,6 +346,7 @@ const tick = setInterval(() => {
   labelLetters.forEach((el, i) => el.classList.toggle('lit', i < lit));
   if (p >= 100) { clearInterval(tick); setTimeout(openSite, 300); }
 }, 70);
+} // end !classicMode preloader boot
 
 function openSite() {
   document.body.classList.add('is-open');
