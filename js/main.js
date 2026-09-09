@@ -190,48 +190,30 @@ const cClose = document.querySelector('.cframe-close');
 function cinemaDrive(cf) {
   if (!cinemaTrack) return;
   if (cf > 5.1) return;
-  if (cf < 3.9) { // the story waits for its panel to fully take the viewport: no blurred words at screen edges during the works acts
+  if (cf < 3.9) { // the story waits for its panel to fully take the viewport
     if (cStage) cStage.style.opacity = '0';
     if (cBurn) cBurn.style.opacity = '0';
     return;
   }
-  // the stage speaks only when its panel substantially covers the viewport -
-  // a sliver of panel at the screen edge must never carry blurred half-words
   if (cStage) {
     const r = cStage.getBoundingClientRect();
     const visH = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
     var stageCover = Math.min(1, visH / (innerHeight * 0.72));
   }
   const p = Math.min(1, Math.max(0, (cf - 4.03) / 0.72)); // plays inside the panel's full-cover window (pr ~0.66-0.79)
-  cinemaTrack.style.transform = `translate3d(${p * (CF_N - 1) * innerWidth}px, 0, 0)`;
   if (cProg) cProg.style.transform = `scaleX(${p})`;
-  // S5→S6 burn-through: the closing frame ignites and the kiln light blooms through
+  // one centered text beat at a time: pure crossfade with a slight settle, never a flying panel
   const q = Math.min(1, Math.max(0, (cf - 4.55) / 0.45));
   const pN = p * (CF_N - 1);
   for (let i = 0; i < CF_N; i++) {
     const d = Math.abs(pN - i);
-    let o = Math.min(1, Math.max(0, 1 - Math.max(0, d - 0.18) * 2.2));
-    let b = Math.min(10, Math.max(0, d - 0.18) * 18);
-    let extra = '';
-    if (q > 0 && cFrames[i] === cClose) {
-      o *= (1 - q * q);
-      b += q * 7;
-      extra = ` brightness(${(1 + 2.3 * q).toFixed(2)})`;
-    }
+    const o = Math.min(1, Math.max(0, 1 - d * 2.4)) * (stageCover ?? 1);
     const el = cFrames[i];
     el.style.opacity = o.toFixed(3);
-    el.style.filter = (b > 0.1 || extra) ? `blur(${b.toFixed(1)}px)${extra}` : 'none';
+    el.style.transform = `translate3d(0, ${((pN - i) * -14).toFixed(1)}px, 0)`;
   }
-  if (cStage) {
-    const qFade = q > 0.75 ? Math.max(0, 1 - (q - 0.75) / 0.25) : 1;
-    cStage.style.opacity = (qFade * (typeof stageCover === 'number' ? stageCover : 1)).toFixed(3);
-  }
-  if (cBurn) {
-    if (q > 0 && q < 1) {
-      cBurn.style.opacity = String(Math.min(1, q * 1.15).toFixed(3));
-      cBurn.style.transform = `scale(${(0.15 + q * 1.5).toFixed(3)})`;
-    } else if (q >= 1) { cBurn.style.opacity = '0'; }
-  }
+  if (cStage) cStage.style.opacity = String(stageCover ?? 1);
+  if (cBurn) { cBurn.style.opacity = String(q * 0.9); cBurn.style.transform = `scale(${1 + q * 0.35})`; }
 }
 
 /* ---------- S4 glass shimmer: scroll velocity bends the case glass ---------- */

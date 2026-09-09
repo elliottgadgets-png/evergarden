@@ -235,11 +235,11 @@ body.is-open #scroll-content { opacity: 1; transition: opacity 1.1s ease .35s; }
 /* S5 cinema — סיפור: scroll-scrubbed lateral dolly, RTL (frame 1 rightmost, pan travels right→left) */
 .panel-cinema { display: block; padding: 0; height: 100vh; min-height: 100vh; overflow: hidden; position: relative; background: transparent; }
 .cinema-stage { position: absolute; inset: 0; overflow: hidden; }
-.cinema-track { position: absolute; top: 0; right: 0; height: 100%; display: flex; direction: rtl; will-change: transform; }
-.cframe { flex: none; width: 100vw; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.6vh; text-align: center; padding: 0 8vw; }
-.cf-marker { font-size: 11px; letter-spacing: .4em; font-weight: 400; color: #D9A441; margin: 0; }
-.cf-big { font-family: var(--serif-he); font-weight: 300; font-size: clamp(30px, 4.4vw, 64px); line-height: 1.2; color: #F2E7D5; margin: 0; max-width: 22ch; }
-.cf-sub { font-weight: 200; font-size: clamp(14px, 1.5vw, 19px); letter-spacing: .06em; color: rgba(242,231,213,.62); margin: 0; }
+.cinema-track { position: absolute; inset: 0; display: block; }
+.cframe { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.6vh; text-align: center; padding: 0 7vw; opacity: 0; will-change: opacity, transform; }
+.cf-marker { font-size: 11px; letter-spacing: .4em; font-weight: 400; color: #D9A441; margin: 0; text-shadow: 0 1px 14px rgba(8,5,3,.8); }
+.cf-big { font-family: var(--serif-he); font-weight: 300; font-size: clamp(30px, 4.4vw, 64px); line-height: 1.2; color: #F2E7D5; margin: 0; max-width: 22ch; text-shadow: 0 2px 26px rgba(8,5,3,.85), 0 0 8px rgba(8,5,3,.6); }
+.cf-sub { font-weight: 200; font-size: clamp(14px, 1.5vw, 19px); letter-spacing: .06em; color: rgba(242,231,213,.62); margin: 0; text-shadow: 0 1px 16px rgba(8,5,3,.85); }
 .cframe-close .cf-big { color: #D9A441; }
 .cinema-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 72% 62% at 50% 46%, transparent 55%, rgba(10,7,4,.55) 100%); }
 .cinema-leak { position: absolute; width: 46vw; height: 46vw; border-radius: 50%; filter: blur(90px); pointer-events: none; opacity: .16; }

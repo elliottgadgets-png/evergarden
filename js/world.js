@@ -265,26 +265,46 @@ export function createWorld(canvas) {
   sunGlow.position.copy(sun.position);
   scene.add(sunGlow);
 
-  /* ---------- the gate (S7) ---------- */
+  /* ---------- the gate (S7): basalt portal with an ember seam - no flat panels ---------- */
   const gate = new THREE.Group();
-  const monoMat = new THREE.MeshBasicMaterial({ color: 0x241d16, fog: true, transparent: true, opacity: 0.05 });
+  const gateMat = new THREE.MeshStandardMaterial({ color: 0x201812, roughness: 0.92, metalness: 0.05, transparent: true, opacity: 0 });
+  gateMat.depthWrite = false;
+  const jag = (geo, s0) => {
+    const pa = geo.attributes.position; let s = s0;
+    const rn = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    for (let v = 0; v < pa.count; v++) {
+      pa.setX(v, pa.getX(v) + (rn() - 0.5) * 3.4);
+      pa.setY(v, pa.getY(v) + (rn() - 0.5) * 2.6);
+      pa.setZ(v, pa.getZ(v) + (rn() - 0.5) * 3.4);
+    }
+    geo.computeVertexNormals();
+    return geo;
+  };
   for (const sx of [-24, 24]) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(9, 150, 9), monoMat);
+    const m = new THREE.Mesh(jag(new THREE.BoxGeometry(13, 150, 13, 3, 12, 3), sx * 7 + 5), gateMat);
     m.position.set(sx, 75, 0);
     gate.add(m);
   }
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(57, 9, 9), monoMat);
-  lintel.position.set(0, 146, 0);
+  const lintel = new THREE.Mesh(jag(new THREE.BoxGeometry(64, 13, 13, 6, 2, 2), 99), gateMat);
+  lintel.position.set(0, 147, 0);
   gate.add(lintel);
-  const doorMat = new THREE.MeshBasicMaterial({ color: 0xF4C56B, fog: false, transparent: true, opacity: 0, toneMapped: false });
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(34, 132), doorMat);
-  door.position.set(0, 68, 0);
-  gate.add(door);
+  // the threshold: a narrow ember seam of light between the pillars, waking as you arrive
+  const seamMat = new THREE.MeshBasicMaterial({ color: 0xF4C56B, fog: false, transparent: true, opacity: 0, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false });
+  const seam = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 128), seamMat);
+  seam.position.set(0, 66, 0);
+  gate.add(seam);
+  const threshold = new THREE.Mesh(new THREE.CircleGeometry(16, 28),
+    new THREE.MeshBasicMaterial({ color: 0xE8862E, transparent: true, opacity: 0, fog: false, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
+  threshold.rotation.x = -Math.PI / 2; threshold.position.set(0, 0.5, 10);
+  gate.add(threshold);
   const doorGlow = new THREE.Sprite(new THREE.SpriteMaterial({
     map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false,
   }));
-  doorGlow.scale.set(300, 340, 1); doorGlow.position.set(0, 70, 6);
+  doorGlow.scale.set(120, 200, 1); doorGlow.position.set(0, 70, 6);
   gate.add(doorGlow);
+  const gateLight = new THREE.PointLight(0xE8862E, 0, 220, 2);
+  gateLight.position.set(0, 40, 26);
+  gate.add(gateLight);
   gate.position.set(0, 0, -2380);
   scene.add(gate);
 
@@ -295,34 +315,24 @@ export function createWorld(canvas) {
   const basalt2 = () => new THREE.MeshStandardMaterial({ color: 0x1c1510, roughness: 0.95, metalness: 0.04 });
   const texLoader = new THREE.TextureLoader();
 
-  // S2 close: the crucible mid-pour beside the road — where the molten veins come from
-  const crucible = makeCrucible();
+  // S2 close: a molten seep beside the road - where the ember veins come from (crucible prop removed: primitive geometry)
   {
     const cp = curve.getPointAt(0.285);
-    crucible.scale.setScalar(12);
-    crucible.position.set(cp.x + 12, 0, cp.z - 4);
-    crucible.rotation.y = 0.5;
-    scene.add(crucible);
-    // grounding: molten pool where the pour lands + a glowing stream from the lip
     const pool = new THREE.Mesh(new THREE.CircleGeometry(7, 28),
       new THREE.MeshBasicMaterial({ color: 0xE8862E, transparent: true, opacity: 0, fog: false, toneMapped: false }));
     pool.rotation.x = -Math.PI / 2; pool.position.set(cp.x + 20, 0.4, cp.z - 2);
     scene.add(pool);
-    const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.7, 12, 8),
-      new THREE.MeshBasicMaterial({ color: 0xF4C56B, transparent: true, opacity: 0, fog: false, toneMapped: false }));
-    stream.position.set(cp.x + 17.5, 8, cp.z - 3);
-    stream.rotation.z = 0.35;
-    scene.add(stream);
+    const seepGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
+    seepGlow.scale.set(26, 10, 1); seepGlow.position.set(cp.x + 20, 2.5, cp.z - 2);
+    scene.add(seepGlow);
     const pourLight = new THREE.PointLight(0xE8862E, 900, 90, 2);
-    pourLight.position.set(cp.x + 12, 16, cp.z);
+    pourLight.position.set(cp.x + 16, 6, cp.z);
     scene.add(pourLight);
     propsUpdaters.push((t, pr, pq) => {
       const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.268) / 0.06));
-      crucible.userData.update(t, ph);
-      pourLight.intensity = 400 + ph * 1200;
-      pool.material.opacity = ph * 0.75;
-      stream.material.opacity = Math.max(0, ph - 0.45) * 1.6;
-      stream.scale.y = 0.4 + ph * 0.6;
+      pourLight.intensity = 250 + ph * 800;
+      pool.material.opacity = ph * 0.6;
+      seepGlow.material.opacity = ph * 0.35;
     });
   }
 
@@ -483,49 +493,13 @@ export function createWorld(canvas) {
     fm.rotation.y = frn() * 1.2;
     scene.add(fm);
   });
-  // living mini-site on the screen face
-  const scrC = document.createElement('canvas'); scrC.width = 512; scrC.height = 320;
-  const scrX = scrC.getContext('2d');
-  function drawMiniSite(gl) {
-    scrX.fillStyle = '#0c0e11'; scrX.fillRect(0, 0, 512, 320);
-    scrX.fillStyle = '#171a1f'; scrX.fillRect(0, 0, 512, 44);
-    scrX.fillStyle = '#e86a5e'; scrX.beginPath(); scrX.arc(496, 22, 6, 0, 7); scrX.fill();
-    scrX.fillStyle = '#e8b95e'; scrX.beginPath(); scrX.arc(476, 22, 6, 0, 7); scrX.fill();
-    scrX.fillStyle = '#7ec97e'; scrX.beginPath(); scrX.arc(456, 22, 6, 0, 7); scrX.fill();
-    scrX.fillStyle = '#23272e'; scrX.fillRect(30, 12, 380, 22);
-    scrX.fillStyle = '#8a877e'; scrX.font = '13px sans-serif'; scrX.textAlign = 'left';
-    scrX.fillText('your-site.co.il', 42, 28);
-    scrX.strokeStyle = `rgba(232,134,46,${0.5 + gl * 0.5})`; scrX.lineWidth = 3;
-    scrX.beginPath(); scrX.arc(256, 108, 22, 0, 7); scrX.stroke();
-    scrX.fillStyle = `rgba(232,134,46,${0.6 + gl * 0.4})`; scrX.beginPath(); scrX.arc(256, 108, 7, 0, 7); scrX.fill();
-    scrX.fillStyle = '#d8d2c4';
-    [0, 1].forEach(r => { scrX.globalAlpha = 0.85 - r * 0.25; scrX.fillRect(156, 152 + r * 22, 200 - r * 60, 9); });
-    scrX.globalAlpha = 0.5;
-    [0, 1, 2].forEach(r => scrX.fillRect(176, 210 + r * 16, 160 - r * 24, 5));
-    scrX.globalAlpha = 1;
-    scrX.fillStyle = '#E8862E'; scrX.fillRect(206, 268, 100, 26);
-    scrX.fillStyle = '#0b0b0d'; scrX.font = 'bold 13px sans-serif'; scrX.textAlign = 'center';
-    scrX.fillText('דברו איתי', 256, 286);
-  }
-  drawMiniSite(0.5);
-  const scrTex = new THREE.CanvasTexture(scrC);
-  scrTex.colorSpace = THREE.SRGBColorSpace;
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(19, 12),
-    new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false, transparent: true }));
-  monumentFades.push(screen.material); monumentObjects.push(screen);
-  screen.position.set(0, 3, 2.62);
-  monument.add(screen);
+  // the monument is pure basalt now: the mini-site screen read as a webpage fragment, not craft
   const monLight = new THREE.PointLight(0xE8862E, 350, 80, 2);
   monLight.position.set(monGp.x - 16, 18, monGp.z + 14);
   scene.add(monLight);
   propsUpdaters.push((t, pr, pq) => {
     const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.44) / 0.10));
     monLight.intensity = 120 + ph * 500;
-    if (ph > 0.05 && (!frame._miniT || t - frame._miniT > 0.5)) {
-      frame._miniT = t;
-      drawMiniSite(0.4 + 0.6 * Math.abs(Math.sin(t * 0.8)));
-      scrTex.needsUpdate = true;
-    }
   });
 
 
@@ -592,37 +566,7 @@ export function createWorld(canvas) {
     if (ph > 0.03 && (!frame._filmT || t - frame._filmT > 0.16)) { frame._filmT = t; drawFilm(t); filmTex.needsUpdate = true; }
   });
 
-  /* ---------- authored silhouettes: spires that thicken into the canyon ---------- */
-  const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true, transparent: true, opacity: 0 });
-  propsUpdaters.push((t, pr) => {
-    const base = Math.min(1, Math.max(0, (pr - 0.05) / 0.06));
-    const reliefClear = (1 - smooth(0.415, 0.455, pr) + smooth(0.61, 0.66, pr)) * (1 - smooth(0.70, 0.73, pr) * (1 - smooth(0.80, 0.83, pr))); // also clear for the relief #3 dwell
-    spireMat.opacity = base * Math.min(1, reliefClear);
-  });
-  let seed = 7;
-  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let i = 0; i < 22; i++) {
-    const st = 0.16 + (i / 22) * 0.78 + rnd() * 0.02; // clear of the hero opening
-    const sp = curve.getPointAt(Math.min(0.98, st));
-    const side = rnd() > 0.5 ? 1 : -1;
-    const canyon = st > 0.32 && st < 0.60; // S3-S4: walls close in
-    const dist = canyon ? 34 + rnd() * 30 : 55 + rnd() * 70;
-    const h = canyon ? 70 + rnd() * 90 : 18 + rnd() * 45;
-    const r = 4 + rnd() * (canyon ? 10 : 7);
-    const geo = new THREE.ConeGeometry(r, h, 5 + Math.floor(rnd() * 3));
-    // irregular silhouette: jitter the cone's ring vertices
-    const posA = geo.attributes.position;
-    for (let v = 0; v < posA.count; v++) {
-      posA.setX(v, posA.getX(v) * (0.82 + rnd() * 0.4));
-      posA.setZ(v, posA.getZ(v) * (0.82 + rnd() * 0.4));
-    }
-    geo.computeVertexNormals();
-    if ((st > 0.30 && st < 0.72) || (st > 0.83 && st < 0.96)) continue; // no spire/cone silhouettes in any relief act window
-    const spire = new THREE.Mesh(geo, spireMat);
-    spire.position.set(sp.x + side * dist, h * 0.32, sp.z + (rnd() - 0.5) * 60);
-    spire.rotation.y = rnd() * Math.PI;
-    scene.add(spire);
-  }
+  /* spires removed: cone silhouettes read as prototype language - the mountains carry the horizon */
 
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -652,7 +596,7 @@ export function createWorld(canvas) {
 
     const sunRise = smooth(0.52, 0.86, prS) * (1 - 0.55 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS))); // dip the wash while relief #3 holds the dwell
     sun.position.y = -220 + sunRise * 330;
-    sun.material.opacity = smooth(0.50, 0.72, prS);
+    sun.material.opacity = smooth(0.50, 0.72, prS) * (1 - smooth(0.78, 0.88, prS)); // the hard disc retires before the door act: geometric sun = rejected language
     sunGlow.material.opacity = smooth(0.55, 0.85, prS) * 0.5;
     sunGlow.position.copy(sun.position);
     scene.fog.density = 0.0018 - sunRise * 0.0006;
@@ -665,9 +609,12 @@ export function createWorld(canvas) {
     const rockIn = smooth(0.66, 0.72, prS); // S5 projection rock exists only in its own act
   rockMat.opacity = rockIn; rock.visible = rockIn > 0.01;
   const gateIn = smooth(0.84, 0.97, prS);
-    monoMat.opacity = 0.95 * smooth(0.815, 0.90, prS); // gate exists only in the door act - no ghost during any works station
-    doorMat.opacity = gateIn * 0.8;
-    doorGlow.material.opacity = gateIn * 0.4;
+    gateMat.opacity = 0.96 * smooth(0.815, 0.90, prS); // gate exists only in the door act - no ghost during any works station
+    gate.visible = gateMat.opacity > 0.01;
+    seamMat.opacity = gateIn * 0.9;
+    threshold.material.opacity = gateIn * 0.5;
+    doorGlow.material.opacity = gateIn * 0.35;
+    gateLight.intensity = gateIn * 2600;
 
     const warm = smooth(0.45, 0.85, prS) * (1 - 0.4 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS)));
     scene.fog.color.setRGB(0.078 + warm * 0.05, 0.063 + warm * 0.012, 0.047);
@@ -719,6 +666,6 @@ export function createWorld(canvas) {
     renderer.setSize(innerWidth, innerHeight);
   }
   addEventListener('resize', resize);
-  window.__world = { tUni, pathUni, sun, doorMat, camera };
+  window.__world = { tUni, pathUni, sun, seamMat, camera };
   return { frame, resize };
 }
