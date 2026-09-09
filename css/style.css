@@ -50,7 +50,7 @@ body.cursor-hover #cursor-ring { width: 56px; height: 56px; margin: -28px 0 0 -2
 body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none; }
 
 #preloader {
-  position: fixed; inset: 0; z-index: 200; background: transparent;
+  position: fixed; inset: 0; z-index: 200; background: var(--ink); /* gate-3: opaque so hero text can paint beneath without showing through */
   display: flex; align-items: center; justify-content: center;
 }
 #load-count {
@@ -219,8 +219,7 @@ body[data-chapter="2"] .crosshair { opacity: 0; } /* debug chrome killed */
 #load-label .l.lit { opacity: 1; transform: none; filter: none; }
 #load-label .l.sp { width: .35em; }
 /* content hidden until the flint-strike finishes; openSite() reveals it */
-#scroll-content { opacity: 0; }
-body.is-open #scroll-content { opacity: 1; transition: opacity 1.1s ease .35s; }
+/* gate-3: content paints statically; the preloader overlay owns the opening transition */
 
 /* progress rail — 8 ticks per blueprint v4.0 §7 */
 #rail { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); z-index: 50; display: flex; flex-direction: column; gap: 14px; pointer-events: none; }
