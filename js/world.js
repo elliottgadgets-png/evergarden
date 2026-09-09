@@ -399,10 +399,10 @@ export function createWorld(canvas) {
       niche.children.forEach((ch, ci) => {
         if (!ch.material) return;
         const isBar = !isRelief && ci < 4; // frame bars hidden: the lit opening is the alcove
-        ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, Math.max(0, (ph - 0.18) / 0.82) * 2.2) : ease); // relief slabs stay hidden until the carve reads as rock, not as a distant lit sign
+        ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, Math.max(0, (ph - 0.45) / 0.55) * 2.2) : ease); // relief slabs stay hidden until the source image starts resolving - no distant neon-web/sign phase
       });
       backMats.opacity = ease * 0.92;
-      niche.visible = ph > (isRelief ? 0.18 : 0.005); if (!isRelief) back.visible = ease > 0.01; // ahead slabs never ghost into earlier acts: the carved shader face ignores material.opacity, so hard-gate visibility on the arc
+      niche.visible = ph > (isRelief ? 0.45 : 0.005); if (!isRelief) back.visible = ease > 0.01; // ahead slabs never ghost into earlier acts: the carved shader face ignores material.opacity, so hard-gate visibility on the arc
       caseLight.intensity = (150 + ph * 450) * (0.15 + 0.85 * ease);
     });
   });
