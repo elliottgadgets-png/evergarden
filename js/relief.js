@@ -22,6 +22,7 @@ const RELIEF_FRAG = /* glsl */`
   uniform sampler2D uMap, uDepth;
   uniform float uArc, uTime;
   uniform vec2 uImp;
+  uniform float uHeat;
   uniform vec2 uTexel;
   varying vec2 vUv;
   float vnoise(vec2 p) {
@@ -69,7 +70,7 @@ const RELIEF_FRAG = /* glsl */`
     float lit = smoothstep(front, front - 0.22, rad);  // glow where the front has passed
     float flick = 0.82 + 0.18 * sin(uTime * 11.0) * sin(uTime * 6.7);
     float heat = (edge * 0.85 + crack * 1.5) * channels * veinsPh * lit * flick;
-    col += vec3(1.0, 0.55, 0.18) * heat * 3.2 * (1.0 - read);
+    col += vec3(1.0, 0.55, 0.18) * heat * 3.2 * uHeat * (1.0 - read); // uHeat: per-station ignition amplitude, same heat logic
     col += vec3(1.0, 0.62, 0.25) * ignite * (1.0 - read) * 0.10 * channels;
     gl_FragColor = vec4(col, 1.0);
   }
@@ -125,7 +126,18 @@ const VERDANT_DEPTH = {
   ],
 };
 
-export function makeRelief({ map, depthSpec, seed = 977, impact = [0.38, 0.58] }) {
+const VIDEOEDITOR_DEPTH = {
+  base: 0.42,
+  regions: [
+    [0.60, 0.18, 0.30, 0.12, 0.85],  // gallery headline - carved deepest
+    [0.50, 0.36, 0.40, 0.48, 0.78],  // blue work card
+    [0.10, 0.36, 0.40, 0.48, 0.78],  // orange work card
+    [0.10, 0.85, 0.80, 0.15, 0.55],  // lower card row
+    [0.00, 0.00, 1.00, 0.07, 0.34],  // nav strip - chrome, shallow
+  ],
+};
+
+export function makeRelief({ map, depthSpec, seed = 977, impact = [0.38, 0.58], heat = 1.0 }) {
   const group = new THREE.Group();
   const depthTex = buildDepthTexture(depthSpec);
   const mat = new THREE.ShaderMaterial({
@@ -135,6 +147,7 @@ export function makeRelief({ map, depthSpec, seed = 977, impact = [0.38, 0.58] }
       uArc: { value: 0 }, uTime: { value: 0 },
       uTexel: { value: new THREE.Vector2(1 / 450, 1 / 281) },
       uImp: { value: new THREE.Vector2(impact[0], impact[1]) },
+      uHeat: { value: heat },
     },
   });
   const face = new THREE.Mesh(new THREE.PlaneGeometry(33.8, 21.2, 130, 84), mat);
@@ -168,4 +181,4 @@ export function makeRelief({ map, depthSpec, seed = 977, impact = [0.38, 0.58] }
   group.userData.update = (t, arc) => { mat.uniforms.uTime.value = t; mat.uniforms.uArc.value = arc; };
   return group;
 }
-export { SOSHIMI_DEPTH, VERDANT_DEPTH };
+export { SOSHIMI_DEPTH, VERDANT_DEPTH, VIDEOEDITOR_DEPTH };

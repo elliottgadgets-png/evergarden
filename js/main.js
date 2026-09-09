@@ -258,6 +258,8 @@ function loop(t) {
   if (plate) plate.classList.toggle('is-on', pr > 0.485 && pr < 0.545);
   const plate2 = document.getElementById('plate-verdant');
   if (plate2) plate2.classList.toggle('is-on', pr > 0.556 && pr < 0.610);
+  const plate3 = document.getElementById('plate-video');
+  if (plate3) plate3.classList.toggle('is-on', pr > 0.716 && pr < 0.770);
   const worksTitle = document.querySelector('.works-title');
   if (worksTitle) worksTitle.style.opacity = (pr > 0.478 && pr < 0.552) ? '0' : '';
   const worksInner = document.querySelector('.works-inner');

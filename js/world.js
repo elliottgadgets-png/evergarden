@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { makeCrucible, makeNiche, makeBookSealStand } from './props.js';
-import { makeRelief, SOSHIMI_DEPTH, VERDANT_DEPTH } from './relief.js';
+import { makeRelief, SOSHIMI_DEPTH, VERDANT_DEPTH, VIDEOEDITOR_DEPTH } from './relief.js';
 
 const NOISE = /* glsl */`
 vec3 permute(vec3 x){return mod(((x*34.0)+1.0)*x,289.0);}
@@ -331,18 +331,19 @@ export function createWorld(canvas) {
   const RELIEF_CONF = {
     0: { map: 'assets/work-soshimi.jpg', spec: SOSHIMI_DEPTH, seed: 977,  impact: [0.38, 0.58], nt: 0.615, gc: 0.58  }, // relief #1: soshimi
     1: { map: 'assets/work-verdant.jpg', spec: VERDANT_DEPTH, seed: 1409, impact: [0.50, 0.70], nt: 0.720, gc: 0.685 }, // relief #2: The Sound Room
+    2: { map: 'assets/work-videoeditor.jpg', spec: VIDEOEDITOR_DEPTH, seed: 2711, impact: [0.75, 0.24], heat: 1.5, nt: 0.901, gc: 0.880, offD: 40, offM: 62, leadM: 8 }, // relief #3: NIR video editor (gallery map, closer dwell)
   };
   const nicheShots = ['assets/work-soshimi.jpg', 'assets/work-verdant.jpg', 'assets/work-videoeditor.jpg'];
   nicheShots.forEach((src, i) => {
     const rc = RELIEF_CONF[i];
     const isRelief = !!rc; // S4 works as fired basalt reliefs (v3.1 decision 1), one station per work
-    const niche = isRelief ? makeRelief({ map: texLoader.load(rc.map), depthSpec: rc.spec, seed: rc.seed, impact: rc.impact }) : makeNiche(1.6, 1.05);
+    const niche = isRelief ? makeRelief({ map: texLoader.load(rc.map), depthSpec: rc.spec, seed: rc.seed, impact: rc.impact, heat: rc.heat ?? 1.0 }) : makeNiche(1.6, 1.05);
     const nt = (isRelief ? rc.nt : 0.58 + i * 0.09);
     const np = curve.getPointAt(nt);
     const side = i % 2 === 0 ? 1 : -1;
     niche.scale.setScalar(isRelief ? 1.15 : 13);
-    niche.position.set(np.x + side * (isRelief ? 52 : 44), np.y + 13, np.z);
-    if (isRelief) { reliefStations.push({ pos: niche.position.clone(), side, gc: rc.gc, nt: rc.nt }); niche.rotation.y = -side * 0.35; niche.userData.isReliefRoot = true; if (i === 0) window.__egRelief = niche; else window.__egRelief2 = niche; }
+    niche.position.set(np.x + side * (isRelief ? (innerWidth < 720 ? (rc.offM ?? 52) : (rc.offD ?? 52)) : 44), np.y + 13, np.z); // per-station lateral offset, mobile gets more room
+    if (isRelief) { reliefStations.push({ pos: niche.position.clone(), side, gc: rc.gc, nt: rc.nt, lead: innerWidth < 720 ? (rc.leadM ?? 3.2) : 3.2 }); niche.rotation.y = -side * 0.35; niche.userData.isReliefRoot = true; if (i === 0) window.__egRelief = niche; else window.__egRelief2 = niche; }
     /* unrotated: plane fronts face +z, toward the approaching camera */
     scene.add(niche);
     texLoader.load(src, (tex) => { if (niche.userData.setImage) niche.userData.setImage(tex); });
@@ -360,14 +361,14 @@ export function createWorld(canvas) {
     const back = new THREE.Mesh(backGeo, basalt2());
     back.position.copy(niche.position); back.position.y -= 3; back.position.z -= 9; back.rotation.y = side * 0.06;
     if (!isRelief) scene.add(back);
-    const caseLight = new THREE.PointLight(0xFFD28A, 500, 70, 2);
+    const caseLight = new THREE.PointLight(0xFFD28A, 500, isRelief ? 70 : 100, 2);
     caseLight.position.set(np.x + side * 20, np.y + 22, np.z + 24);
     scene.add(caseLight);
     niche.traverse(o => { if (o.material) { o.material.transparent = true; } });
     const backMats = back.material;
     backMats.transparent = true;
     propsUpdaters.push((t, pr, pq) => {
-      let ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / 0.075));
+      let ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - nt) / (isRelief ? 0.075 : 0.12))); // plain niches glow in earlier on approach
       if (isRelief) {
         // relief arc unfolds during the approach and completes at the dwell (gaze center gc)
         const a = Math.min(1, Math.max(0, (pq - (rc.gc - 0.085)) / 0.085));
@@ -584,7 +585,7 @@ export function createWorld(canvas) {
   projLight.position.set(rockGp.x - 2, 40, rockGp.z + 10);
   scene.add(projLight);
   propsUpdaters.push((t, pr, pq) => {
-    const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.835) / 0.13));
+    const ph = Math.min(1, Math.max(0, 1 - Math.abs(pq - 0.835) / 0.03)); // rock beat compressed ahead of relief #3 dwell
     const flick = 0.85 + 0.15 * Math.sin(t * 13.0) * Math.sin(t * 7.3);
     projMat.opacity = ph * 0.95 * flick;
     projLight.intensity = ph * 1500 * flick;
@@ -595,7 +596,7 @@ export function createWorld(canvas) {
   const spireMat = new THREE.MeshBasicMaterial({ color: 0x0e0a07, fog: true, transparent: true, opacity: 0 });
   propsUpdaters.push((t, pr) => {
     const base = Math.min(1, Math.max(0, (pr - 0.05) / 0.06));
-    const reliefClear = 1 - smooth(0.415, 0.455, pr) + smooth(0.61, 0.66, pr);
+    const reliefClear = (1 - smooth(0.415, 0.455, pr) + smooth(0.61, 0.66, pr)) * (1 - smooth(0.70, 0.73, pr) * (1 - smooth(0.80, 0.83, pr))); // also clear for the relief #3 dwell
     spireMat.opacity = base * Math.min(1, reliefClear);
   });
   let seed = 7;
@@ -616,7 +617,7 @@ export function createWorld(canvas) {
       posA.setZ(v, posA.getZ(v) * (0.82 + rnd() * 0.4));
     }
     geo.computeVertexNormals();
-    if (st > 0.30 && st < 0.72) continue; // quarry slice: no spire/cone silhouettes anywhere in the relief act
+    if ((st > 0.30 && st < 0.72) || (st > 0.83 && st < 0.96)) continue; // no spire/cone silhouettes in any relief act window
     const spire = new THREE.Mesh(geo, spireMat);
     spire.position.set(sp.x + side * dist, h * 0.32, sp.z + (rnd() - 0.5) * 60);
     spire.rotation.y = rnd() * Math.PI;
@@ -626,7 +627,7 @@ export function createWorld(canvas) {
   /* ---------- drive ---------- */
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   // station remap (camera-path spec v1.0 windows): dwell at stations, travel between
-  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.66,0.830],[0.70,5/6],[0.74,5/6+0.004],[0.88,0.93],[1,1]]; // 0.56-0.66: second works station dwell (relief #2), same slope language as the first
+  const REMAP = [[0,0],[0.04,0.012],[0.20,1/6],[0.34,2/6],[0.46,3/6],[0.56,4/6],[0.66,0.830],[0.72,0.848],[0.82,0.930],[1,1]]; // 0.56-0.66: relief #2 dwell; 0.66-0.72: rock beat; 0.72-0.82: relief #3 dwell; 0.82-1: door approach
   function pathT(pr) {
     for (let i = 1; i < REMAP.length; i++) {
       if (pr <= REMAP[i][0]) {
@@ -644,12 +645,12 @@ export function createWorld(canvas) {
     tUni.uTime.value = t; pathUni.uTime.value = t;
     tUni.uBuild.value = smooth(0.0, 0.30, prS);
     tUni.uVeins.value = smooth(0.10, 0.26, prS) * (1.0 - smooth(0.58, 0.78, prS) * 0.8);
-    tUni.uSun.value = smooth(0.52, 0.80, prS);
+    tUni.uSun.value = smooth(0.52, 0.80, prS) * (1 - 0.55 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS))); // same dwell dip as sunRise
     skyUni.uSun.value = tUni.uSun.value;
     sky.position.copy(camera.position);
     pathUni.uReveal.value = prS * 1.02;
 
-    const sunRise = smooth(0.52, 0.86, prS);
+    const sunRise = smooth(0.52, 0.86, prS) * (1 - 0.55 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS))); // dip the wash while relief #3 holds the dwell
     sun.position.y = -220 + sunRise * 330;
     sun.material.opacity = smooth(0.50, 0.72, prS);
     sunGlow.material.opacity = smooth(0.55, 0.85, prS) * 0.5;
@@ -664,11 +665,11 @@ export function createWorld(canvas) {
     const rockIn = smooth(0.66, 0.72, prS); // S5 projection rock exists only in its own act
   rockMat.opacity = rockIn; rock.visible = rockIn > 0.01;
   const gateIn = smooth(0.84, 0.97, prS);
-    monoMat.opacity = 0.95 * smooth(0.70, 0.86, prS); // no 5% ghost on the horizon during the works acts
+    monoMat.opacity = 0.95 * smooth(0.815, 0.90, prS); // gate exists only in the door act - no ghost during any works station
     doorMat.opacity = gateIn * 0.8;
     doorGlow.material.opacity = gateIn * 0.4;
 
-    const warm = smooth(0.45, 0.85, prS);
+    const warm = smooth(0.45, 0.85, prS) * (1 - 0.4 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS)));
     scene.fog.color.setRGB(0.078 + warm * 0.05, 0.063 + warm * 0.012, 0.047);
     tUni.uFogColor.value.copy(scene.fog.color); pathUni.uFogColor.value.copy(scene.fog.color);
 
@@ -695,7 +696,7 @@ export function createWorld(canvas) {
       const rPh = Math.min(1, Math.max(0, 1 - Math.abs(pq - rs.gc) / 0.075));
       const w = rPh * rPh * (3 - 2 * rPh);
       if (w <= 0) continue;
-      gx += (rs.pos.x + rs.side * 3.2) * w; gy += (rs.pos.y + 1) * w; gz += rs.pos.z * w; gw += w; // gaze past face center: no edge crop at full dwell
+      gx += (rs.pos.x + rs.side * rs.lead) * w; gy += (rs.pos.y + 1) * w; gz += rs.pos.z * w; gw += w; // gaze past face center: no edge crop at full dwell
     }
     const lx = ahead.x * 0.6 + ((gw > 0 ? gx / gw : 0) - ahead.x * 0.6) * gw;
     const ly = (ahead.y - 8) + ((gw > 0 ? gy / gw : 0) - (ahead.y - 8)) * gw;
