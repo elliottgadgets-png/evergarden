@@ -220,6 +220,7 @@ export function createWorld(canvas) {
   const skyUni = {
     uSunDir: { value: new THREE.Vector3(0, 0.02, -1).normalize() },
     uSun: { value: 0 },
+    uGlow: { value: 0 },
   };
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(2350, 32, 20),
@@ -227,14 +228,14 @@ export function createWorld(canvas) {
       uniforms: skyUni, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `uniform vec3 uSunDir; uniform float uSun; varying vec3 vDir;
+      fragmentShader: `uniform vec3 uSunDir; uniform float uSun; uniform float uGlow; varying vec3 vDir;
         void main(){
           float h = clamp(vDir.y, -0.08, 1.0);
           vec3 zen = vec3(0.030, 0.024, 0.020);
           vec3 hor = vec3(0.105, 0.075, 0.048);
           vec3 col = mix(hor, zen, pow(max(h, 0.0), 0.55));
           float sunward = pow(max(dot(normalize(vDir), uSunDir), 0.0), 5.0);
-          col += vec3(0.85, 0.46, 0.16) * sunward * (0.12 + uSun * 0.85);
+          col += vec3(0.85, 0.46, 0.16) * sunward * (0.12 + uGlow * 0.85);
           col += vec3(0.45, 0.24, 0.09) * pow(max(dot(normalize(vDir), uSunDir), 0.0), 1.6) * uSun * 0.22;
           gl_FragColor = vec4(col, 1.0);
         }`,
@@ -398,10 +399,10 @@ export function createWorld(canvas) {
       niche.children.forEach((ch, ci) => {
         if (!ch.material) return;
         const isBar = !isRelief && ci < 4; // frame bars hidden: the lit opening is the alcove
-        ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, ph * 2.2) : ease);
+        ch.material.opacity = isBar ? 0.0 : (isRelief ? Math.min(1, Math.max(0, (ph - 0.18) / 0.82) * 2.2) : ease); // relief slabs stay hidden until the carve reads as rock, not as a distant lit sign
       });
       backMats.opacity = ease * 0.92;
-      niche.visible = ph > 0.005; if (!isRelief) back.visible = ease > 0.01; // ahead slabs never ghost into earlier acts: the carved shader face ignores material.opacity, so hard-gate visibility on the arc
+      niche.visible = ph > (isRelief ? 0.18 : 0.005); if (!isRelief) back.visible = ease > 0.01; // ahead slabs never ghost into earlier acts: the carved shader face ignores material.opacity, so hard-gate visibility on the arc
       caseLight.intensity = (150 + ph * 450) * (0.15 + 0.85 * ease);
     });
   });
@@ -458,7 +459,6 @@ export function createWorld(canvas) {
     let s3 = 11;
     const rn = () => { s3 = (s3 * 16807) % 2147483647; return s3 / 2147483647; };
     for (let v = 0; v < pa.count; v++) {
-      if (Math.abs(pa.getZ(v)) < 2) continue; // keep the screen face flat
       const taper = 1 - Math.max(0, pa.getY(v)) / 38 * 0.24;
       pa.setX(v, pa.getX(v) * taper + (rn() - 0.5) * 2.6);
       pa.setY(v, pa.getY(v) + (rn() - 0.5) * 1.8);
@@ -524,34 +524,35 @@ export function createWorld(canvas) {
   scene.add(rock);
   const filmC = document.createElement('canvas'); filmC.width = 512; filmC.height = 288;
   const filmX = filmC.getContext('2d');
-  const filmImgs = [];
-  ['assets/work-videoeditor.jpg', 'assets/work-verdant.jpg', 'assets/work-soshimi.jpg'].forEach(src => { const im = new Image(); im.src = src; filmImgs.push(im); });
   let filmG = 13;
   function drawFilm(t) {
-    filmX.fillStyle = '#160d05'; filmX.fillRect(0, 0, 512, 288);
-    const off = (t * 42) % 440;
-    const base = Math.floor((t * 42) / 440);
-    for (let k = -1; k <= 1; k++) {
-      const im = filmImgs[(((base + k) % 3) + 3) % 3];
-      const x = 36 + k * 440 - off;
-      filmX.strokeStyle = 'rgba(255,210,138,0.5)'; filmX.lineWidth = 3;
-      filmX.strokeRect(x - 6, 24, 412, 240);
-      if (im.complete && im.naturalWidth) {
-        filmX.globalAlpha = 0.92; filmX.drawImage(im, x, 30, 400, 228); filmX.globalAlpha = 1;
-        filmX.fillStyle = 'rgba(232,134,46,0.14)'; filmX.fillRect(x, 30, 400, 228);
-      } else { filmX.fillStyle = '#241608'; filmX.fillRect(x, 30, 400, 228); }
+    // ember veins waking across the rock face - no imagery, no frames: light in stone
+    filmX.fillStyle = '#000000'; filmX.fillRect(0, 0, 512, 288); // additive: black bg vanishes, only the veins read
+    filmX.lineCap = 'round';
+    for (let v = 0; v < 5; v++) {
+      let vx = 30 + ((v * 197) % 450), vy = 20 + ((v * 131) % 240);
+      filmX.beginPath(); filmX.moveTo(vx, vy);
+      for (let s = 0; s < 9; s++) {
+        vx += Math.sin(v * 7.3 + s * 1.9 + 0.6) * 52 + 18;
+        vy += Math.cos(v * 3.1 + s * 2.3) * 34;
+        filmX.lineTo(vx, vy);
+      }
+      const breathe = 0.5 + 0.5 * Math.sin(t * 1.7 + v * 2.2);
+      filmX.strokeStyle = `rgba(232,134,46,${(0.10 + breathe * 0.30).toFixed(3)})`;
+      filmX.lineWidth = 1.4 + breathe * 1.8;
+      filmX.stroke();
+      filmX.strokeStyle = `rgba(244,197,107,${(breathe * 0.20).toFixed(3)})`;
+      filmX.lineWidth = 0.7;
+      filmX.stroke();
     }
-    filmX.fillStyle = 'rgba(10,6,3,0.85)'; filmX.fillRect(0, 0, 512, 18); filmX.fillRect(0, 270, 512, 18);
-    filmX.fillStyle = 'rgba(255,210,138,0.55)';
-    for (let hx = 12; hx < 512; hx += 32) { filmX.fillRect(hx, 5, 12, 8); filmX.fillRect(hx, 275, 12, 8); }
     for (let g = 0; g < 60; g++) { filmG = (filmG * 16807) % 2147483647; const r = filmG / 2147483647; filmX.fillStyle = `rgba(255,220,170,${0.05 + r * 0.1})`; filmX.fillRect(r * 512, ((filmG >> 3) % 288), 2, 1); }
     const sy = (t * 97) % 288;
-    filmX.fillStyle = 'rgba(255,230,190,0.07)'; filmX.fillRect(0, sy, 512, 3);
+    filmX.fillStyle = 'rgba(255,230,190,0.05)'; filmX.fillRect(0, sy, 512, 3);
   }
   drawFilm(0);
   const filmTex = new THREE.CanvasTexture(filmC);
   filmTex.colorSpace = THREE.SRGBColorSpace;
-  const projMat = new THREE.MeshBasicMaterial({ map: filmTex, transparent: true, opacity: 0, toneMapped: false, fog: false });
+  const projMat = new THREE.MeshBasicMaterial({ map: filmTex, transparent: true, opacity: 0, toneMapped: false, fog: false, blending: THREE.AdditiveBlending, depthWrite: false });
   const proj = new THREE.Mesh(new THREE.PlaneGeometry(60, 34), projMat);
   proj.position.set(0, 2, 4.6);
   rock.add(proj);
@@ -591,6 +592,7 @@ export function createWorld(canvas) {
     tUni.uVeins.value = smooth(0.10, 0.26, prS) * (1.0 - smooth(0.58, 0.78, prS) * 0.8);
     tUni.uSun.value = smooth(0.52, 0.80, prS) * (1 - 0.55 * smooth(0.705, 0.74, prS) * (1 - smooth(0.79, 0.825, prS))); // same dwell dip as sunRise
     skyUni.uSun.value = tUni.uSun.value;
+    skyUni.uGlow.value = tUni.uSun.value * (1 - 0.88 * smooth(0.80, 0.92, prS)); // tight sun lobe retires into the door act: no geometric sun disc behind the gate
     sky.position.copy(camera.position);
     pathUni.uReveal.value = prS * 1.02;
 
