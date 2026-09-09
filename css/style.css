@@ -108,9 +108,14 @@ body.native-scroll #cursor-dot, body.native-scroll #cursor-ring { display: none;
   .work-card { width: 84vw; max-width: none; }
 }
 .panel-outro { justify-content: flex-end; padding-bottom: 0; }
+/* seed 022: halo scrim so thin outro lines stay readable where the seam of light and the dark silhouette band cross the copy column */
+.panel .outro-pre, .panel .outro-small { text-shadow: 0 0 3px rgba(14,12,10,.98), 0 0 9px rgba(14,12,10,.95), 0 1px 15px rgba(14,12,10,.9), 0 0 26px rgba(14,12,10,.8); }
 .panel-outro { position: relative; }
 .outro-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .panel-outro .outro-inner { position: relative; z-index: 2; padding-bottom: 11vh; }
+/* seed 022: local copy matte — dims the seam's peak behind the outro copy stack so thin lines stay true over the beam */
+.panel-outro .outro-inner::before { content: ""; position: absolute; inset: -3vh -8vw; z-index: -1; pointer-events: none;
+  background: radial-gradient(72% 60% at 50% 40%, rgba(8,6,4,.58) 0%, rgba(8,6,4,.45) 42%, rgba(8,6,4,.18) 66%, transparent 82%); }
 
 .cap {
   font-weight: 200; font-size: clamp(13px, 1.3vw, 17px);
