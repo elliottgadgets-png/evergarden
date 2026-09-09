@@ -339,3 +339,5 @@ body.classic .hero-copy .cta-pill.is-disabled {
   font-weight: 600; letter-spacing: .06em;
   padding: 16px 42px; font-size: clamp(14px, 1.5vw, 19px);
 }
+.work-card.is-disabled { pointer-events: none; }
+.work-card.is-disabled .work-type { color: rgba(230,210,170,.4); }
